@@ -16,3 +16,5 @@ export const dumpWriteRateLimiter = rateLimit({
   },
   skip: () => process.env.NODE_ENV === 'test', // Skip in automated tests
 });
+
+export const writeRateLimiter = dumpWriteRateLimiter;

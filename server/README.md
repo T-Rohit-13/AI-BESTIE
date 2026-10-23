@@ -228,3 +228,234 @@ const API_BASE = 'http://localhost:5000/api/v1'; // or /dump
 // All calls must include authentication credentials (cookie/token)
 ```
 Set `VITE_DUMP_MOCK=false` in `client/.env` to switch from mock mode to this live backend.
+
+---
+
+# INARO — Dump Mode Backend Notification System (Member 4)
+
+The Notification System delivers **gentle, witty, playful push reminders** when a teenager or college student has not used their private Dump Mode for over 24 hours. It feels like a friendly tap on the shoulder from a supportive friend, with **zero clinical pressure, streak shaming, or guilt trips**.
+
+---
+
+## 1. Core Workflow & Eligibility Rules
+
+The notification background scheduler runs periodically (default: every 1 hour) and evaluates user eligibility:
+
+```text
+Scheduled job starts
+        ↓
+Find eligible users:
+  - notifications_enabled = true
+  - push_token exists (at least one device)
+  - last_dump_at IS NOT NULL (never-dumped users are excluded!)
+  - current_time - last_dump_at > 24 hours
+  - last_notified_at IS NULL OR current_time - last_notified_at > 24 hours
+        ↓
+Select rotated witty message (avoids last_dump_notification_message_id)
+        ↓
+Send push notification via provider
+        ↓
+If successful:
+  Update last_notified_at = current_timestamp
+  Update last_dump_notification_message_id = message.id
+If failed:
+  Do NOT update last_notified_at (preserves eligibility for next retry)
+```
+
+### Important Integration Rules
+1. **Ownership Boundary**: The Dump Mode backend owns and writes `users.last_dump_at`. The notification system **reads** it and **never** modifies it.
+2. **New Users Rule**: Users with `last_dump_at = NULL` have never used Dump Mode. The system **never** sends reminders to these users until they save their first dump.
+3. **Frequency & Cooldown**: At most one notification every 24 hours per user.
+4. **Strict Privacy**: The notification system **never** reads, inspects, or logs Dump Mode journal entries or mood logs.
+
+---
+
+## 2. Notification API Endpoints
+
+Base Paths: `/notifications` or `/api/v1/notifications`
+
+### 2.1 Update Dump Reminder Preferences
+* **Method / Path**: `PUT /notifications/dump-reminders`
+* **Authentication**: Required (`req.user.id`)
+* **Request Body**:
+  ```json
+  {
+    "enabled": true
+  }
+  ```
+* **Success Response (`200 OK`)**:
+  ```json
+  {
+    "enabled": true
+  }
+  ```
+
+### 2.2 Get Dump Reminder Preferences
+* **Method / Path**: `GET /notifications/dump-reminders`
+* **Authentication**: Required (`req.user.id`)
+* **Success Response (`200 OK`)**:
+  ```json
+  {
+    "enabled": true
+  }
+  ```
+
+### 2.3 Register Push Device Token
+* **Method / Path**: `PUT /notifications/push-token`
+* **Authentication**: Required (`req.user.id`)
+* **Request Body**:
+  ```json
+  {
+    "token": "fcm_device_token_sample_string_12345",
+    "platform": "web"
+  }
+  ```
+* **Success Response (`200 OK`)**:
+  ```json
+  {
+    "success": true,
+    "message": "Push token registered successfully"
+  }
+  ```
+* **Privacy Note**: Push tokens are always masked in logs (e.g. `fcm_...2345`).
+
+### 2.4 Unregister Push Device Token
+* **Method / Path**: `DELETE /notifications/push-token`
+* **Authentication**: Required (`req.user.id`)
+* **Request Body**:
+  ```json
+  {
+    "token": "fcm_device_token_sample_string_12345"
+  }
+  ```
+
+### 2.5 Trigger Notification Job (Manual / Testing / Cron)
+* **Method / Path**: `POST /notifications/trigger-job`
+* **Authentication**: Required (`req.user.id`)
+* **Success Response (`200 OK`)**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "jobStartedAt": "2026-10-24T01:45:00.000Z",
+      "jobCompletedAt": "2026-10-24T01:45:00.045Z",
+      "eligibleCount": 3,
+      "successCount": 3,
+      "failureCount": 0,
+      "invalidTokensRemoved": 0,
+      "durationMs": 45
+    }
+  }
+  ```
+
+---
+
+## 3. Witty Message Pool & Non-Clinical Safety
+
+The notification pool provides short, casual, supportive reminders:
+
+| Message ID | Notification Text |
+| :--- | :--- |
+| `tabs-37` | `"Your brain has 37 tabs open. Wanna dump a few? 👀"` |
+| `storage-space` | `"Got some thoughts taking up storage space?"` |
+| `spill-space` | `"Okay, spill. We've got space. 👀"` |
+| `today-episode` | `"Today's episode of 'What even happened today?' is waiting."` |
+| `brain-storage` | `"Brain storage almost full. Time for a dump? 🧠"` |
+| `thoughts-called` | `"Your thoughts called. They said they're waiting. 👀"` |
+| `fine-talk` | `"Somewhere between 'I'm fine' and 'I need to talk about this'... Dump Mode exists."` |
+| `mental-clutter` | `"Got a little mental clutter? We've got space."` |
+
+### Rotation Logic
+When a user qualifies for a reminder, `selectRotatedMessage(lastMessageId)` excludes the message previously sent to that user, preventing repetitive prompts.
+
+### Non-Clinical Guarantee
+Code and prompts **never** include guilt, missed streaks, medical diagnoses, clinical terminology, or psychiatric claims.
+
+---
+
+## 4. Push Notification Provider Abstraction
+
+Delivery is cleanly abstracted behind `IPushNotificationProvider`:
+- **`ConsolePushProvider`**: Default provider for local development. Formats notifications with masked tokens to stdout.
+- **`MockPushProvider`**: In-memory provider for unit and integration testing.
+- **`FcmPushProvider`**: Firebase Cloud Messaging provider for production push delivery.
+
+### Expired / Invalid Tokens Handling
+When the provider reports that a token has expired or is invalid (`invalidToken: true`), the repository automatically removes the token from `notification_devices` to avoid repeated failed delivery attempts.
+
+---
+
+## 5. Environment Variables
+
+Configure in `.env`:
+
+```env
+# Push Provider ("console" | "mock" | "fcm")
+PUSH_PROVIDER=console
+
+# Firebase Cloud Messaging Credentials (when PUSH_PROVIDER=fcm)
+FCM_PROJECT_ID=inaro-wellness
+FCM_CLIENT_EMAIL=firebase-adminsdk@inaro-wellness.iam.gserviceaccount.com
+FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Scheduler Configuration
+ENABLE_NOTIFICATION_SCHEDULER=true
+# Check interval in milliseconds (default: 3600000ms = 1 hour)
+NOTIFICATION_SCHEDULER_INTERVAL_MS=3600000
+```
+
+---
+
+## 6. Running the Scheduler Locally
+
+1. **Integrated Server**: When running `npm run dev`, the server automatically initializes and starts `NotificationScheduler` (unless `ENABLE_NOTIFICATION_SCHEDULER=false`).
+2. **Manual Invocations**: Trigger an immediate evaluation anytime via:
+   ```bash
+   curl -X POST http://localhost:5000/api/v1/notifications/trigger-job -H "x-user-id: <user-id>"
+   ```
+
+---
+
+## 7. Running Tests
+
+Run the full automated Vitest test suite covering all 47 Dump Mode and Notification test cases:
+
+```bash
+cd server
+npm test
+```
+
+---
+
+## 8. Frontend Notification Click Integration
+
+When a push notification arrives, the payload contains:
+
+```json
+{
+  "type": "dump_reminder",
+  "route": "/dump"
+}
+```
+
+The frontend service worker / notification handler should navigate the user directly to the `/dump` route:
+
+```typescript
+// Service Worker notificationclick handler
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const route = event.notification.data?.route || '/dump';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(route) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(route);
+      }
+    })
+  );
+});
+```

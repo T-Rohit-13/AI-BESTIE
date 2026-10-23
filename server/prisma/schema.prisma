@@ -28,15 +28,34 @@ model User {
   
   trustedContact        TrustedContact?
   characters            Character[]
-  dumpSpaceName         String            @default("My Dump") @map("dump_space_name")
-  lastDumpAt            DateTime?         @map("last_dump_at")
-  dumpEntries           DumpEntry[]
-  dailyMoodLogs         DailyMoodLog[]
-  dailySleepLogs        DailySleepLog[]
-  notificationPref      NotificationPreference?
-  safetyAuditLogs       SafetyAuditLog[]
+  dumpSpaceName                  String                 @default("My Dump") @map("dump_space_name")
+  lastDumpAt                     DateTime?              @map("last_dump_at")
+  notificationsEnabled           Boolean                @default(true) @map("notifications_enabled")
+  lastNotifiedAt                 DateTime?              @map("last_notified_at")
+  lastDumpNotificationMessageId  String?                @map("last_dump_notification_message_id")
+  notificationDevices            NotificationDevice[]
+  dumpEntries                    DumpEntry[]
+  dailyMoodLogs                  DailyMoodLog[]
+  dailySleepLogs                 DailySleepLog[]
+  notificationPref               NotificationPreference?
+  safetyAuditLogs                SafetyAuditLog[]
 
   @@map("users")
+}
+
+model NotificationDevice {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushToken String   @map("push_token")
+  platform  String   @default("web") // "web" | "android" | "ios"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, pushToken])
+  @@index([userId])
+  @@index([pushToken])
+  @@map("notification_devices")
 }
 
 model OtpVerification {
