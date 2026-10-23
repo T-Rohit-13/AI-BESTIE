@@ -266,14 +266,16 @@ body {
 .main-stage {
   flex: 1;
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  max-width: 1320px;
+  grid-template-columns: minmax(420px, 1.05fr) minmax(380px, 480px);
+  max-width: 1220px;
   width: 100%;
   margin: 0 auto;
   padding: 0.4rem 2rem 1.2rem;
   gap: 2.2rem;
   align-items: center;
+  justify-content: center;
   height: calc(100vh - 62px);
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -286,6 +288,8 @@ body {
   height: 100%;
   max-height: calc(100vh - 86px);
   justify-content: center;
+  min-width: 420px;
+  width: 100%;
 }
 
 .showcase-card {
@@ -303,11 +307,14 @@ body {
   justify-content: space-between;
   height: 100%;
   max-height: 590px;
+  min-height: 500px;
+  box-sizing: border-box;
 }
 
 .showcase-header {
   position: relative;
   z-index: 2;
+  max-width: 370px;
 }
 
 .showcase-chip {
@@ -346,7 +353,7 @@ body {
   font-size: 0.88rem;
   line-height: 1.5;
   color: var(--text-slate);
-  max-width: 440px;
+  max-width: 370px;
 }
 
 /* Avatar 3D Canvas Box */
@@ -391,11 +398,11 @@ body {
   box-shadow: 0 2px 8px rgba(124, 58, 237, 0.08);
 }
 
-/* Handwritten Motivational Micro-Doodles */
+/* Handwritten Motivational Micro-Doodles (Positioned safely away from text) */
 .doodle {
   position: absolute;
   font-family: var(--font-handwriting);
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--primary-purple);
   pointer-events: none;
@@ -405,35 +412,37 @@ body {
 }
 
 .doodle-1 {
-  top: 16px;
-  right: 24px;
-  transform: rotate(6deg);
+  top: 14px;
+  right: 18px;
+  transform: rotate(5deg);
   color: #7C3AED;
+  font-size: 1.25rem;
   animation: doodleBob 4s ease-in-out infinite alternate;
 }
 
 .doodle-2 {
-  bottom: 60px;
-  right: 24px;
-  transform: rotate(-6deg);
+  bottom: 56px;
+  right: 18px;
+  transform: rotate(-5deg);
   color: #2563EB;
+  font-size: 1.25rem;
   animation: doodleBob 5s ease-in-out infinite alternate 1s;
 }
 
 .doodle-3 {
-  top: 36%;
+  top: 54%;
   left: 14px;
-  transform: rotate(-10deg);
-  font-size: 1.2rem;
+  transform: translateY(-50%) rotate(-8deg);
+  font-size: 1.1rem;
   color: #059669;
   animation: doodleBob 4.5s ease-in-out infinite alternate 0.5s;
 }
 
 .doodle-4 {
-  top: 36%;
-  right: 16px;
-  transform: rotate(8deg);
-  font-size: 1.2rem;
+  top: 54%;
+  right: 14px;
+  transform: translateY(-50%) rotate(8deg);
+  font-size: 1.1rem;
   color: #D97706;
   animation: doodleBob 5.5s ease-in-out infinite alternate 1.5s;
 }
@@ -483,11 +492,14 @@ body {
 .right-form-panel {
   position: relative;
   width: 100%;
+  max-width: 480px;
+  min-width: 380px;
   height: 100%;
   max-height: calc(100vh - 86px);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  margin: 0 auto;
 }
 
 .glass-form-card {
@@ -685,11 +697,18 @@ body {
   color: var(--primary-purple);
 }
 
-/* Phone input group with country selector and in-line send OTP */
+/* Phone input group: country selector + phone input side by side */
 .phone-input-group {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
+
+.phone-input-group .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
 
 .country-select {
   font-family: var(--font-body);
@@ -712,28 +731,24 @@ body {
   box-shadow: 0 0 0 4px var(--input-focus-ring);
 }
 
-.phone-with-action {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-}
 
 .send-otp-btn {
-  position: absolute;
-  right: 5px;
+  display: block;
+  width: 100%;
+  margin-top: 7px;
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #fff;
   background: var(--primary-gradient);
   border: none;
-  border-radius: 7px;
-  padding: 5px 9px;
+  border-radius: 9px;
+  padding: 9px 16px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
   transition: all var(--transition-fast);
   white-space: nowrap;
+  text-align: center;
 }
 
 .send-otp-btn:hover:not(:disabled) {
@@ -974,16 +989,23 @@ body {
 }
 
 .otp-inputs-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 12px;
-  margin: 1.5rem 0 1rem;
+  margin: 1.3rem auto 1rem;
+  max-width: 290px;
+  width: 100%;
 }
 
 .otp-field {
-  height: 62px;
+  width: 58px;
+  height: 58px;
+  max-width: 62px;
+  min-width: 48px;
+  flex: 1;
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: 1.65rem;
   font-weight: 800;
   text-align: center;
   color: var(--text-charcoal);
@@ -1088,40 +1110,72 @@ body {
   margin-bottom: 0.85rem;
 }
 
-/* Location Toggle */
-.location-toggle-box {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 0.6rem;
-}
-
-.location-option-btn {
+/* Location Mandatory Card */
+.location-mandatory-card {
+  width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0.8rem 0.5rem;
-  background: rgba(255, 255, 255, 0.75);
-  border: 1.5px solid var(--glass-border);
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  border: 2px dashed rgba(168, 85, 247, 0.45);
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-slate);
   cursor: pointer;
   transition: all var(--transition-fast);
+  outline: none;
+  margin-bottom: 0.4rem;
 }
 
-.location-option-btn.active {
+.location-mandatory-card:hover {
   background: #fff;
   border-color: var(--primary-purple);
-  color: var(--primary-purple);
   box-shadow: 0 4px 14px rgba(124, 58, 237, 0.12);
 }
 
-.location-icon {
-  font-size: 1.25rem;
+.location-mandatory-card.granted {
+  border-style: solid;
+  border-color: var(--status-success);
+  background: rgba(240, 253, 244, 0.9);
+}
+
+.location-mandatory-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-btn-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-charcoal);
+}
+
+.location-btn-sub {
+  font-size: 0.74rem;
+  color: var(--text-slate);
+}
+
+.location-status-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--status-warning);
+}
+
+.location-status-badge.verified {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+@keyframes pulseMandatory {
+  0%, 100% { transform: scale(1); border-color: rgba(168, 85, 247, 0.45); }
+  50% { transform: scale(1.02); border-color: var(--status-error); }
+}
+
+.pulse-mandatory {
+  animation: pulseMandatory 0.5s ease 2;
 }
 
 /* Privacy Guarantee Badge */

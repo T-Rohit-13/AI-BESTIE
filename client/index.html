@@ -117,7 +117,7 @@
           <div class="screen-view active" id="screen-landing">
             <div class="landing-hero">
               <div class="landing-tagline-badge">
-                <span>🌱</span> Mindful Daily Wellness
+                <span>🕊️</span> Pause. Breathe. Bloom.
               </div>
               <h1 class="landing-headline">
                 Your space. <br>
@@ -239,11 +239,9 @@
                       <option value="+44">🇬🇧 +44</option>
                       <option value="+65">🇸🇬 +65</option>
                     </select>
-                    <div class="phone-with-action">
-                      <input type="tel" id="signup-phone" class="form-input input-has-icon-right" placeholder="10-digit number" maxlength="10" required autocomplete="tel-national">
-                      <button type="button" id="send-otp-btn" class="send-otp-btn" disabled>Send OTP</button>
-                    </div>
+                    <input type="tel" id="signup-phone" class="form-input" placeholder="10-digit number" maxlength="10" required autocomplete="tel-national">
                   </div>
+                  <button type="button" id="send-otp-btn" class="send-otp-btn" disabled>Send OTP</button>
                   <div class="validation-feedback"></div>
                 </div>
               </div>
@@ -380,50 +378,40 @@
               </div>
             </div>
 
-            <!-- Location Permission Toggle for Helpline Support -->
+            <!-- Location Permission for Helpline Support (Mandatory) -->
             <div class="setup-section-card">
               <div class="setup-section-title">
                 <span>📍</span>
-                <span>Location-Based Helpline Support</span>
+                <span>Location Access <span class="label-mandatory">* Mandatory</span></span>
               </div>
               <p class="setup-section-desc">
-                Enables immediate mapping to local verified counselling and crisis support resources.
+                Mandatory to automatically detect your region and connect you with verified regional counseling and emergency crisis helplines.
               </p>
               
-              <div class="location-toggle-box">
-                <button type="button" class="location-option-btn active" id="loc-allow-btn">
+              <button type="button" class="location-mandatory-card" id="loc-allow-btn">
+                <div class="location-mandatory-content">
                   <span class="location-icon">📡</span>
-                  <span>Allow location access</span>
-                </button>
-                <button type="button" class="location-option-btn" id="loc-manual-btn">
-                  <span class="location-icon">🗺️</span>
-                  <span>Select manually</span>
-                </button>
-              </div>
-
-              <div id="manual-region-dropdown" style="display: none; margin-top: 10px;">
-                <select class="form-input" id="manual-region-select" aria-label="Select state or region">
-                  <option value="TN">Tamil Nadu (Chennai / Coimbatore)</option>
-                  <option value="KA">Karnataka (Bengaluru)</option>
-                  <option value="MH">Maharashtra (Mumbai / Pune)</option>
-                  <option value="DL">Delhi NCR</option>
-                  <option value="NATIONAL">National Tele-MANAS Helpline (14416)</option>
-                </select>
-              </div>
+                  <div style="text-align: left;">
+                    <div class="location-btn-title" id="loc-btn-title">Allow Location Access (Required)</div>
+                    <div class="location-btn-sub" id="loc-btn-sub">Click to grant browser location permission</div>
+                  </div>
+                </div>
+                <div class="location-status-badge" id="loc-status-pill">Pending</div>
+              </button>
+              <div class="validation-feedback" id="loc-feedback" style="margin-top: 6px;"></div>
             </div>
 
             <!-- Privacy Guarantee Badge -->
             <div class="privacy-guarantee-badge">
               <div class="privacy-badge-icon">🛡️</div>
               <div class="privacy-badge-text">
-                <strong>Your safety matters:</strong> We'll connect you with trusted counseling helplines based on your location. INARO never makes unauthorized calls or diagnoses.
+                <strong>Your safety matters:</strong> We connect you with verified counseling helplines based on your location. INARO never makes unauthorized calls or diagnoses.
               </div>
             </div>
 
             <!-- Action buttons -->
             <div class="setup-action-row">
-              <button type="button" class="btn-glass" id="skip-setup-btn" style="flex: 1;">Skip for Now</button>
-              <button type="button" class="btn-primary" id="finish-setup-btn" style="flex: 1.6;">
+              <button type="button" class="btn-primary" id="finish-setup-btn" style="width: 100%;">
                 <span>Complete Setup</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
