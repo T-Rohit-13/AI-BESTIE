@@ -28,11 +28,15 @@ model User {
   
   trustedContact        TrustedContact?
   characters            Character[]
+  dumpSpaceName         String            @default("My Dump") @map("dump_space_name")
+  lastDumpAt            DateTime?         @map("last_dump_at")
   dumpEntries           DumpEntry[]
   dailyMoodLogs         DailyMoodLog[]
   dailySleepLogs        DailySleepLog[]
   notificationPref      NotificationPreference?
   safetyAuditLogs       SafetyAuditLog[]
+
+  @@map("users")
 }
 
 model OtpVerification {
@@ -122,17 +126,16 @@ model ConversationSummary {
 // 3. DUMP MODE & DAILY TRACKERS (Member 4)
 // -----------------------------------------------------------------------------
 model DumpEntry {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title        String    @default("Untitled Entry")
-  content      String
-  audioNoteUrl String?
-  moodTag      String?   // Optional self-selected mood tag
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String   // Stored as version:1:iv:ciphertext:authTag (AES-256-GCM encrypted)
+  mood      Int?     // 1=Very Low, 2=Low, 3=Neutral, 4=Good, 5=Great
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([userId, createdAt])
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("dump_entries")
 }
 
 model DailyMoodLog {
