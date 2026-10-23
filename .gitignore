@@ -1,0 +1,84 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+
+# Python & ML
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ML Data & Checkpoints (Prevent large binaries in Git)
+ml-service/datasets/raw/*
+!ml-service/datasets/raw/.gitkeep
+ml-service/datasets/processed/*
+!ml-service/datasets/processed/.gitkeep
+ml-service/models/checkpoints/*
+!ml-service/models/checkpoints/.gitkeep
+*.pt
+*.pth
+*.onnx
+*.bin
+*.h5
+*.pkl
+*.wav
+*.mp3
+*.webm
+*.ogg
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

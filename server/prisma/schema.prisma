@@ -1,0 +1,200 @@
+// INARO — Unified Database Schema (Prisma)
+// Maintained under the custodianship of Team Member 1 (Auth), Member 4 (Dump/Helpline/Trackers),
+// Members 2 & 3 (Interactive Mode & Safety), and the Integration Lead
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -----------------------------------------------------------------------------
+// 1. USER & AUTHENTICATION (Member 1)
+// -----------------------------------------------------------------------------
+model User {
+  id                    String            @id @default(uuid())
+  username              String            @unique
+  fullName              String
+  age                   Int
+  mobileNumber          String            @unique
+  isMobileVerified      Boolean           @default(false)
+  passwordHash          String            // Argon2id hash
+  tokenVersion          Int               @default(0) // Incremented on password reset to invalidate active sessions
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  
+  trustedContact        TrustedContact?
+  characters            Character[]
+  dumpEntries           DumpEntry[]
+  dailyMoodLogs         DailyMoodLog[]
+  dailySleepLogs        DailySleepLog[]
+  notificationPref      NotificationPreference?
+  safetyAuditLogs       SafetyAuditLog[]
+}
+
+model OtpVerification {
+  id                   String    @id @default(uuid())
+  identifier           String    // Mobile number or username
+  codeHash             String    // Cryptographic hash of OTP (e.g. SHA-256)
+  purpose              String    // "REGISTER" | "PASSWORD_RESET"
+  resetTokenHash       String?   @unique // Hash of single-use reset authorization token
+  expiresAt            DateTime  // 5-minute TTL for OTP
+  resetTokenExpiresAt  DateTime? // 10-minute TTL for password reset completion
+  attempts             Int       @default(0) // Max 3 attempts before lockout
+  isConsumed           Boolean   @default(false) // Single-use flag
+  createdAt            DateTime  @default(now())
+
+  @@index([identifier])
+}
+
+model TrustedContact {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactName   String
+  mobileNumber  String
+  consentGiven  Boolean  @default(false) // Explicit user consent required
+  createdAt     DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// 2. INTERACTIVE MODE & CHARACTERS (Members 2 & 3 — Joint Scope)
+// -----------------------------------------------------------------------------
+model Character {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  avatarStyle     String         // "classic" | "zen" | "friendly"
+  systemPrompt    String         // Personality parameters injected to Gemini
+  toneDescription String         // e.g. "Gentle, listening, uplifting"
+  isArchived      Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  
+  conversations   Conversation[]
+
+  @@index([userId])
+}
+
+model Conversation {
+  id           String      @id @default(uuid())
+  characterId  String
+  character    Character   @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  messages     Message[]
+  summaries    ConversationSummary[]
+
+  @@index([characterId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String       // "USER" | "AI"
+  textContent    String
+  audioUrl       String?      // Ephemeral voice note reference
+  emotionLabel   String?      // Inferred emotion tag
+  confidence     Float?
+  createdAt      DateTime     @default(now()) // Evaluated by 30-day retention worker
+
+  @@index([conversationId, createdAt])
+}
+
+model ConversationSummary {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  summaryText    String       // Condensed rolling memory for Gemini context
+  periodStart    DateTime
+  periodEnd      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+// -----------------------------------------------------------------------------
+// 3. DUMP MODE & DAILY TRACKERS (Member 4)
+// -----------------------------------------------------------------------------
+model DumpEntry {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String    @default("Untitled Entry")
+  content      String
+  audioNoteUrl String?
+  moodTag      String?   // Optional self-selected mood tag
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model DailyMoodLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date // Specific calendar date (YYYY-MM-DD)
+  moodRating  Int      // 1-5 rating scale
+  createdAt   DateTime @default(now())
+
+  // Note: Missing days have NO row in this table.
+  // The rolling 7-day evaluator ignores missing days and does not count them as distress.
+  @@unique([userId, date])
+}
+
+model DailySleepLog {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime @db.Date
+  durationHours  Float
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model NotificationPreference {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dumpRemindersEnabled   Boolean  @default(true)
+  safetyAlertsEnabled    Boolean  @default(true)
+  preferredTime          String   @default("20:00")
+  lastNotificationSentAt DateTime?
+}
+
+// -----------------------------------------------------------------------------
+// 4. SHARED HELPLINE DIRECTORY (Member 4 / Shared)
+// -----------------------------------------------------------------------------
+model HelplineResource {
+  id                String   @id @default(uuid())
+  category          String   // "GOVERNMENT" | "CRISIS_COUNSELLING" | "STUDENT_SUPPORT"
+  serviceName       String
+  phoneNumber       String
+  description       String
+  operatingHours    String
+  languageSupported String   // "Tamil, English, Hindi"
+  region            String   @default("National")
+  isVerified        Boolean  @default(false) // Unverified by default; requires explicit administrative verification
+}
+
+// -----------------------------------------------------------------------------
+// 5. SAFETY AUDIT LOG (Members 2 & 3 — Joint Scope)
+// -----------------------------------------------------------------------------
+model SafetyAuditLog {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  severityLevel  String   // "GREEN" | "AMBER" | "RED"
+  evaluationTier String?  // "IMMEDIATE_ACUTE" | "SEVEN_DAY_MODERATE" | "SEVEN_DAY_ELEVATED"
+  actionTaken    String   // "DISPLAYED_HELPLINE_MODAL" | "OFFERED_TRUSTED_CONTACT"
+  timestamp      DateTime @default(now())
+
+  @@index([userId, timestamp])
+}
