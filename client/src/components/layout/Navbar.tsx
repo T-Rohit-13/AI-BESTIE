@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDailyEntry } from '../../context/DailyEntryContext';
-import { HeartHandshake, Smile, MessageCircleHeart } from 'lucide-react';
+import { HeartHandshake, Smile, MessageCircleHeart, Sparkles } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -46,6 +46,15 @@ export const Navbar: React.FC = () => {
           >
             Companions
           </Link>
+
+          <a
+            href="/companion-3d.html"
+            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-purple-700 hover:bg-purple-50 transition"
+            title="Open 3D Avatar Interactive Studio"
+          >
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <span>3D Avatar</span>
+          </a>
 
           <Link
             to="/support"
