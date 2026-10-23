@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INARO — Your Space. Your Pace. | Student Mental Health & Wellness</title>
+  <meta name="description" content="INARO is an empathetic, privacy-first AI companion for college students. Talk, reflect, and be yourself in a safe, non-judgmental space.">
+  
+  <!-- Favicon and Google Fonts -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237C3AED'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Design System Tokens & Auth Styles -->
+  <link rel="stylesheet" href="src/styles/tokens.css">
+  <link rel="stylesheet" href="src/components/auth/auth-ui.css">
+
+  <!-- External Libraries: Three.js for 3D Companion Avatar & Canvas Confetti -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- Ambient Glowing Aura Nodes & Background Grid -->
+  <div class="ambient-scene" aria-hidden="true">
+    <div class="aura-node aura-1"></div>
+    <div class="aura-node aura-2"></div>
+    <div class="aura-node aura-3"></div>
+    <div class="ambient-grid"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Navigation Top Bar -->
+    <header class="app-header">
+      <a class="brand-badge" data-navigate="landing" id="nav-brand-logo">
+        <div class="brand-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+            <path d="M12 12 2.1 10.5"></path>
+            <path d="M12 12V2"></path>
+          </svg>
+        </div>
+        <div class="brand-title">
+          INARO <span class="brand-tag">Student Wellness</span>
+        </div>
+      </a>
+
+      <div class="header-status">
+        <div class="safe-space-pill">
+          <span class="safe-space-dot"></span>
+          <span>100% Confidential & Safe</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Interactive Stage (Split-Screen on Desktop) -->
+    <main class="main-stage">
+      
+      <!-- ===================================================================
+           LEFT PANEL: Inspirational Artwork, Live 3D AI Companion Avatar & Micro-Doodles
+           =================================================================== -->
+      <section class="left-showcase" aria-label="INARO Companion Showcase">
+        <div class="showcase-card">
+          
+          <!-- Handwritten Motivational Micro-Doodles -->
+          <div class="doodle doodle-1">Better Days Ahead ♡</div>
+          <div class="doodle doodle-2">You got this ♡</div>
+          <div class="doodle doodle-3">Take a deep breath ✦</div>
+          <div class="doodle doodle-4">Safe space ✿</div>
+
+          <div class="showcase-header">
+            <div class="showcase-chip">
+              <span>✦</span> Gen-Z Mental Well-Being
+            </div>
+            <h2 class="showcase-title">
+              Meet your <span class="gradient-text">empathetic</span> AI companion.
+            </h2>
+            <p class="showcase-desc">
+              A private, non-clinical space built specifically for college students. Express your emotions without fear of judgment.
+            </p>
+          </div>
+
+          <!-- Live 3D Three.js Companion Avatar Canvas Box -->
+          <div class="avatar-stage-box" id="avatar-container" title="Click me to interact!">
+            <canvas id="avatar3dCanvas" aria-label="Interactive 3D AI Companion Avatar"></canvas>
+            <div class="avatar-hint-tooltip">✦ Tap companion to say hi!</div>
+          </div>
+
+          <!-- Bottom Student Badges Ribbon -->
+          <div class="student-badges-ribbon">
+            <div class="badge-item">
+              <span class="badge-icon">🔒</span>
+              <span>Encrypted Journaling</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-icon">🌸</span>
+              <span>Tamil & English Chat</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-icon">🛡️</span>
+              <span>Verified Crisis Helplines</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           RIGHT PANEL: Deep Glassmorphism Multi-Step Form Card
+           =================================================================== -->
+      <section class="right-form-panel" aria-label="Account Access & Setup Forms">
+        <div class="glass-form-card" id="auth-glass-card">
+          
+          <!-- ===============================================================
+               SCREEN 1: LANDING SCREEN
+               =============================================================== -->
+          <div class="screen-view active" id="screen-landing">
+            <div class="landing-hero">
+              <div class="landing-tagline-badge">
+                <span>🌱</span> Wellness for Campus Life
+              </div>
+              <h1 class="landing-headline">
+                Your space. <br>
+                <span class="gradient-text">Your pace.</span>
+              </h1>
+              <p class="landing-subtitle">
+                A little space to talk, reflect, and be yourself. Join thousands of students caring for their minds.
+              </p>
+
+              <div class="landing-actions">
+                <button type="button" class="btn-primary" data-navigate="signup" id="landing-create-account-btn">
+                  <span>Create Account</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+                <button type="button" class="btn-glass" data-navigate="signin" id="landing-signin-btn">
+                  <span>Sign In</span>
+                </button>
+              </div>
+
+              <div class="landing-trust-row">
+                <div class="landing-trust-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Zero Ads</span>
+                </div>
+                <span>•</span>
+                <div class="landing-trust-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>No Medical Claims</span>
+                </div>
+                <span>•</span>
+                <div class="landing-trust-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Student Safe</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===============================================================
+               SCREEN 2: SIGN-UP SCREEN
+               =============================================================== -->
+          <div class="screen-view" id="screen-signup">
+            <div class="step-indicator-bar">
+              <div class="step-pip active"></div>
+              <div class="step-pip"></div>
+              <div class="step-pip"></div>
+            </div>
+
+            <div class="screen-header">
+              <button type="button" class="screen-back-btn" data-nav-back id="signup-back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Back</span>
+              </button>
+              <h2 class="screen-title">Create Your Account</h2>
+              <p class="screen-subtitle">Join INARO in seconds to begin your personal wellness journey.</p>
+            </div>
+
+            <form id="signup-form" onsubmit="event.preventDefault();">
+              <!-- Username (Mandatory) with Live Validation -->
+              <div class="form-group">
+                <label class="form-label" for="signup-username">
+                  <span>Username <span class="label-mandatory">*</span></span>
+                  <span class="label-helper">Alphanumeric, 3-20 chars</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="signup-username" class="form-input" placeholder="e.g. rohit_t" required autocomplete="username">
+                </div>
+                <div class="validation-feedback" id="username-feedback"></div>
+              </div>
+
+              <!-- Full Name (Mandatory) -->
+              <div class="form-group">
+                <label class="form-label" for="signup-name">
+                  <span>Your Name <span class="label-mandatory">*</span></span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="signup-name" class="form-input" placeholder="e.g. Rohit" required autocomplete="name">
+                </div>
+              </div>
+
+              <!-- Age (Mandatory) with Helper Text -->
+              <div class="form-group">
+                <label class="form-label" for="signup-age">
+                  <span>Age <span class="label-mandatory">*</span></span>
+                  <span class="label-helper">(Must be 13 or older)</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="number" id="signup-age" class="form-input" placeholder="e.g. 21" min="13" max="120" required>
+                </div>
+                <div class="validation-feedback" id="age-feedback"></div>
+              </div>
+
+              <!-- Personal Mobile Number (Mandatory) with Country Code + Send OTP -->
+              <div class="form-group">
+                <label class="form-label" for="signup-phone">
+                  <span>Personal Mobile Number <span class="label-mandatory">*</span></span>
+                </label>
+                <div class="phone-input-group">
+                  <select id="signup-country-code" class="country-select" aria-label="Country Code">
+                    <option value="+91" selected>🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+61">🇦🇺 +61</option>
+                  </select>
+                  <div class="phone-with-action">
+                    <input type="tel" id="signup-phone" class="form-input input-has-icon-right" placeholder="10-digit mobile" maxlength="10" required autocomplete="tel-national">
+                    <button type="button" id="send-otp-btn" class="send-otp-btn" disabled>Send OTP</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Helper Banner Explaining OTP Verification -->
+              <div class="helper-banner">
+                <div class="helper-banner-icon">ℹ️</div>
+                <div>
+                  <strong>Why we verify your phone:</strong> We will send a secure 4-digit OTP to guarantee privacy and account safety. We never spam or sell numbers.
+                </div>
+              </div>
+
+              <!-- Submit CTA -->
+              <button type="button" class="btn-primary" id="signup-continue-btn">
+                <span>Continue</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </form>
+
+            <div class="form-footer-link">
+              Already have an account? 
+              <a class="inline-link" data-navigate="signin" id="signup-to-signin-link">Sign In</a>
+            </div>
+          </div>
+
+          <!-- ===============================================================
+               SCREEN 3: VERIFY OTP SCREEN
+               =============================================================== -->
+          <div class="screen-view" id="screen-verify-otp">
+            <div class="step-indicator-bar">
+              <div class="step-pip done"></div>
+              <div class="step-pip active"></div>
+              <div class="step-pip"></div>
+            </div>
+
+            <div class="screen-header">
+              <button type="button" class="screen-back-btn" data-nav-back id="verify-otp-back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Back</span>
+              </button>
+
+              <div class="otp-header-icon-box">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6Z"></path>
+                  <path d="m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10"></path>
+                  <path d="m9 13 2 2 4-4"></path>
+                </svg>
+              </div>
+
+              <h2 class="screen-title">Verify OTP</h2>
+              <p class="screen-subtitle">
+                Enter the 4-digit code sent to <span class="otp-target-display" id="otp-target-number">+91 98765 43210</span>
+              </p>
+            </div>
+
+            <!-- 4-digit PIN input fields -->
+            <div class="otp-inputs-grid" id="otp-boxes-container">
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-field" id="otp-0" autocomplete="one-time-code" aria-label="Digit 1">
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-field" id="otp-1" aria-label="Digit 2">
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-field" id="otp-2" aria-label="Digit 3">
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-field" id="otp-3" aria-label="Digit 4">
+            </div>
+
+            <!-- Success State Banner Trigger -->
+            <div class="otp-verified-banner" id="otp-verified-banner">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>✓ OTP verified successfully!</span>
+            </div>
+
+            <!-- Live countdown timer & Resend button -->
+            <div class="otp-timer-row">
+              <span id="otp-timer-wrapper">
+                Resend OTP in <strong id="otp-timer-display">00:45</strong>
+              </span>
+              <button type="button" class="resend-btn" id="resend-otp-btn" disabled>Resend Code</button>
+            </div>
+
+            <!-- Bottom CTA Button -->
+            <button type="button" class="btn-primary" id="verify-otp-continue-btn" disabled>
+              <span>Continue</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <!-- ===============================================================
+               SCREEN 4: TRUSTED PERSON & HELPLINE SETUP SCREEN
+               =============================================================== -->
+          <div class="screen-view" id="screen-trusted-setup">
+            <div class="step-indicator-bar">
+              <div class="step-pip done"></div>
+              <div class="step-pip done"></div>
+              <div class="step-pip active"></div>
+            </div>
+
+            <div class="screen-header">
+              <button type="button" class="screen-back-btn" data-nav-back id="trusted-setup-back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Back</span>
+              </button>
+              <h2 class="screen-title">Trusted Contact & Helpline</h2>
+              <p class="screen-subtitle">Your emotional well-being network, kept completely in your control.</p>
+            </div>
+
+            <!-- Trusted Person's Mobile Number (Optional) -->
+            <div class="setup-section-card">
+              <div class="setup-section-title">
+                <span>🤝</span>
+                <span>Trusted Person's Contact <span class="label-helper">(Optional)</span></span>
+              </div>
+              <p class="setup-section-desc">
+                Add someone you trust who may be contacted when appropriate.
+              </p>
+              
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label class="form-label" for="trusted-name">Contact Name</label>
+                <input type="text" id="trusted-name" class="form-input" placeholder="e.g. Sarah / Mom / Roommate">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="trusted-phone">Mobile Number</label>
+                <input type="tel" id="trusted-phone" class="form-input" placeholder="10-digit mobile number" maxlength="10">
+              </div>
+            </div>
+
+            <!-- Location Permission Toggle for Helpline Support -->
+            <div class="setup-section-card">
+              <div class="setup-section-title">
+                <span>📍</span>
+                <span>Location-Based Helpline Support</span>
+              </div>
+              <p class="setup-section-desc">
+                Enables immediate mapping to local university counselling and state crisis resources.
+              </p>
+              
+              <div class="location-toggle-box">
+                <button type="button" class="location-option-btn active" id="loc-allow-btn">
+                  <span class="location-icon">📡</span>
+                  <span>Allow location access</span>
+                </button>
+                <button type="button" class="location-option-btn" id="loc-manual-btn">
+                  <span class="location-icon">🗺️</span>
+                  <span>Select manually</span>
+                </button>
+              </div>
+
+              <div id="manual-region-dropdown" style="display: none; margin-top: 10px;">
+                <select class="form-input" id="manual-region-select" aria-label="Select state or region">
+                  <option value="TN">Tamil Nadu (Chennai / Coimbatore)</option>
+                  <option value="KA">Karnataka (Bengaluru)</option>
+                  <option value="MH">Maharashtra (Mumbai / Pune)</option>
+                  <option value="DL">Delhi NCR</option>
+                  <option value="NATIONAL">National Tele-MANAS Helpline (14416)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Privacy Guarantee Badge -->
+            <div class="privacy-guarantee-badge">
+              <div class="privacy-badge-icon">🛡️</div>
+              <div class="privacy-badge-text">
+                <strong>Your safety matters:</strong> We'll connect you with trusted counseling helplines based on your location. INARO never makes unauthorized calls or diagnoses.
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="setup-action-row">
+              <button type="button" class="btn-glass" id="skip-setup-btn" style="flex: 1;">Skip for Now</button>
+              <button type="button" class="btn-primary" id="finish-setup-btn" style="flex: 1.6;">
+                <span>Complete Setup</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ===============================================================
+               SCREEN 5: SUCCESS / ACCOUNT CREATED SCREEN
+               =============================================================== -->
+          <div class="screen-view" id="screen-success">
+            <div class="success-screen-wrapper">
+              
+              <div class="celebration-avatar-box">
+                <div class="celebration-emoji">✨</div>
+                <div class="celebration-sparks spark-1">🎉</div>
+                <div class="celebration-sparks spark-2">🌟</div>
+              </div>
+
+              <div class="success-details-pill">
+                <span>✓</span> Verification & Setup Complete
+              </div>
+
+              <h2 class="success-headline">Account Created!</h2>
+              <p class="success-subtitle">
+                Welcome to INARO, <strong id="success-user-name">Friend</strong>! Your personalized safe space is ready.
+              </p>
+
+              <div class="success-actions">
+                <button type="button" class="btn-primary" id="go-home-btn" onclick="showToast('Navigating to INARO Interactive Sanctuary…')">
+                  <span>Go to Home</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                </button>
+                <button type="button" class="btn-glass" id="explore-features-btn" onclick="showToast('Features: Character Chat, Private Dump Mode, Mood Tracker & Helplines!')">
+                  <span>Explore Features</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ===============================================================
+               SCREEN 6: SIGN-IN SCREEN
+               =============================================================== -->
+          <div class="screen-view" id="screen-signin">
+            <div class="screen-header">
+              <button type="button" class="screen-back-btn" data-nav-back id="signin-back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Back</span>
+              </button>
+              <h2 class="screen-title">Welcome Back</h2>
+              <p class="screen-subtitle">Good to see you again! Log in to continue your journey.</p>
+            </div>
+
+            <form id="signin-form">
+              <!-- Username or Mobile Number Field -->
+              <div class="form-group">
+                <label class="form-label" for="signin-identifier">
+                  <span>Username or Mobile Number <span class="label-mandatory">*</span></span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="signin-identifier" class="form-input" placeholder="e.g. rohit_t or 9876543210" required autocomplete="username">
+                </div>
+              </div>
+
+              <!-- Password Field with Toggleable Eye Icon -->
+              <div class="form-group">
+                <label class="form-label" for="signin-password">
+                  <span>Password <span class="label-mandatory">*</span></span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="password" id="signin-password" class="form-input input-has-icon-right" placeholder="Enter your password" required autocomplete="current-password">
+                  <button type="button" class="input-icon-btn" id="toggle-password-visibility" aria-label="Toggle password visibility">
+                    👁️
+                  </button>
+                </div>
+              </div>
+
+              <!-- Remember Me & Forgot Password Row -->
+              <div class="signin-options-row">
+                <label class="remember-label">
+                  <input type="checkbox" id="signin-remember" class="remember-checkbox">
+                  <span>Remember me</span>
+                </label>
+                <a class="forgot-password-link" id="forgot-password-link">Forgot Password?</a>
+              </div>
+
+              <!-- Submit CTA -->
+              <button type="submit" class="btn-primary" id="signin-submit-btn">
+                <span>Sign In</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </form>
+
+            <div class="form-footer-link">
+              Don't have an account? 
+              <a class="inline-link" data-navigate="signup" id="signin-to-signup-link">Create Account</a>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =====================================================================
+       Forgot Password Modal (Anti-Enumeration Compliant)
+       ===================================================================== -->
+  <div class="modal-overlay" id="forgot-password-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close dialog">✕</button>
+      
+      <div style="font-size: 2rem; margin-bottom: 0.8rem;">🔑</div>
+      <h3 id="modal-title" style="font-family: var(--font-display); font-size: 1.45rem; font-weight: 800; color: var(--text-charcoal); margin-bottom: 0.4rem;">
+        Reset Your Password
+      </h3>
+      <p style="font-size: 0.88rem; color: var(--text-slate); line-height: 1.5; margin-bottom: 1.4rem;">
+        Enter your registered username or mobile number. If an account exists, a secure verification code will be dispatched.
+      </p>
+
+      <form id="forgot-password-form">
+        <div class="form-group">
+          <label class="form-label" for="forgot-identifier">Username or Mobile Number</label>
+          <input type="text" id="forgot-identifier" class="form-input" placeholder="e.g. rohit_t or 9876543210" required>
+        </div>
+
+        <button type="submit" class="btn-primary" style="margin-top: 1rem;">
+          <span>Send Reset Instructions</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-notice" id="toast-notice" role="alert">
+    <span class="toast-success-icon">✦</span>
+    <span>Welcome to INARO!</span>
+  </div>
+
+  <!-- Auth UI Script -->
+  <script src="src/components/auth/auth-ui.js"></script>
+</body>
+</html>
