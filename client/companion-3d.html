@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>INARO — AI 3D Well-Being Companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/styles/tokens.css">
+  <link rel="stylesheet" href="src/components/avatar/avatar.css">
+  <style>
+    :root {
+      --ink: #3b3358;
+      --mut: #6f6894;
+      --glass: rgba(255, 255, 255, 0.75);
+      --line: rgba(120, 100, 200, 0.25);
+      --acc: var(--mood-primary, #8f7bff);
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --ink: #ece8ff;
+        --mut: #b4acd8;
+        --glass: rgba(26, 34, 54, 0.75);
+        --line: rgba(190, 175, 255, 0.2);
+      }
+    }
+    :root[data-theme="dark"] {
+      --ink: #ece8ff;
+      --mut: #b4acd8;
+      --glass: rgba(26, 34, 54, 0.75);
+      --line: rgba(190, 175, 255, 0.2);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Fredoka, "Noto Sans Tamil", system-ui, sans-serif;
+      color: var(--ink);
+      background: #0a0d14;
+    }
+    #bg {
+      position: fixed;
+      inset: 0;
+      transition: background 0.6s ease;
+      z-index: 0;
+    }
+    #c {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      z-index: 1;
+    }
+    button, input, select, textarea {
+      font: inherit;
+      color: inherit;
+    }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid var(--acc);
+      outline-offset: 2px;
+    }
+    .glass {
+      background: var(--glass);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 18px;
+    }
+    header {
+      position: fixed;
+      top: calc(12px + env(safe-area-inset-top, 0px));
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+    }
+    header > * { pointer-events: auto; }
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    h1 small {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--mut);
+      margin-top: 2px;
+    }
+    .tools {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--glass);
+      border-radius: 999px;
+      padding: 8px 16px;
+      cursor: pointer;
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.95);
+      color: #1e1b4b;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    }
+    select.btn { padding-right: 12px; }
+    
+    /* Radial Ring Menu */
+    #ring {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9;
+    }
+    .ri {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 82px;
+      height: 82px;
+      margin: -41px 0 0 -41px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 500;
+      line-height: 1.1;
+      text-align: center;
+      transform: translate(var(--cx), var(--cy)) scale(0.3);
+      opacity: 0;
+      visibility: hidden;
+      transition: transform 0.45s cubic-bezier(0.2, 1.3, 0.4, 1), opacity 0.25s, visibility 0s 0.45s;
+      border: 1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+    .ri span { font-size: 1.6rem; }
+    #ring.open .ri {
+      transform: translate(var(--x), var(--y)) scale(1);
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition-delay: calc(var(--i) * 35ms), 0s, 0s;
+    }
+    .ri:hover, .ri[aria-current="true"] {
+      background: #ffffff;
+      color: #1e1b4b;
+      box-shadow: 0 0 0 3px var(--acc), 0 8px 28px rgba(120, 90, 220, 0.35);
+    }
+
+    /* Bottom Dock */
+    #dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+    }
+    #row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    #orb canvas {
+      width: 64px;
+      height: 32px;
+    }
+    #st {
+      font-size: 0.82rem;
+      color: var(--ink);
+      padding: 4px 14px;
+      border-radius: 99px;
+      background: var(--glass);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+    #tb {
+      display: none;
+      gap: 8px;
+      width: min(540px, 92vw);
+    }
+    #tb.on { display: flex; }
+    #tb input {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--glass);
+      padding: 10px 18px;
+    }
+    #log {
+      position: fixed;
+      top: calc(72px + env(safe-area-inset-top, 0px));
+      right: 14px;
+      width: min(340px, 88vw);
+      max-height: 48vh;
+      overflow-y: auto;
+      padding: 14px;
+      display: none;
+      font-size: 0.9rem;
+      z-index: 10;
+    }
+    #log.on { display: block; }
+    .m {
+      margin: 6px 0;
+      padding: 8px 12px;
+      border-radius: 14px;
+      background: rgba(143, 123, 255, 0.16);
+      line-height: 1.35;
+    }
+    .m.u {
+      background: rgba(120, 200, 255, 0.22);
+      text-align: right;
+    }
+
+    /* Slide-Up Panels */
+    #panel {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translate(-50%, 105%);
+      width: min(580px, 100%);
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+      border-radius: 24px 24px 0 0;
+      transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+      z-index: 20;
+    }
+    #panel.on { transform: translate(-50%, 0); }
+    #panel h2 {
+      margin: 0 0 12px;
+      font-size: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .g {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      gap: 10px;
+      justify-content: center;
+      margin: 12px 0;
+    }
+    .g button {
+      height: 80px;
+      font-size: 2.2rem;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--glass);
+      cursor: pointer;
+    }
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--glass);
+      padding: 12px;
+      resize: vertical;
+    }
+    label {
+      display: block;
+      margin: 12px 0 4px;
+      font-size: 0.85rem;
+      color: var(--mut);
+    }
+    input[type=text], select {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--glass);
+    }
+    .note {
+      font-size: 0.8rem;
+      color: var(--mut);
+      line-height: 1.4;
+      margin: 6px 0;
+    }
+    .fl {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 14px;
+      margin: 6px 0;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--glass);
+    }
+    .fl strong { font-size: 0.95rem; }
+    #toast {
+      position: fixed;
+      top: calc(72px + env(safe-area-inset-top, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      border-radius: 99px;
+      background: #1e1b4b;
+      color: #ffffff;
+      font-size: 0.88rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      max-width: 92vw;
+      text-align: center;
+      z-index: 30;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    #toast.on { opacity: 1; }
+    #fb[hidden] { display: none !important; }
+    #fb {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body data-emotion="calm">
+  <div id="bg"></div>
+  <canvas id="c" aria-label="INARO 3D Companion"></canvas>
+
+  <div id="fb" hidden>
+    <div class="glass" style="padding: 24px;">
+      3D rendering is not available on this browser/device.<br>
+      Voice interaction, text dialogue, and menu features remain fully active.
+    </div>
+  </div>
+
+  <header>
+    <h1 id="ttl">INARO<small>AI 3D Companion · Owner Interface Scope</small></h1>
+    <div class="tools">
+      <a href="/" class="btn" style="text-decoration:none;font-size:0.85rem">Back to App</a>
+      <label class="btn" style="margin: 0; display: flex; gap: 6px; align-items: center; font-size: 0.85rem">
+        Mood
+        <select id="mood" aria-label="Manual mood override" style="border: 0; background: transparent; width: auto; padding: 0"></select>
+      </label>
+      <button class="btn" id="lg" aria-expanded="false" aria-controls="log">Transcript</button>
+    </div>
+  </header>
+
+  <div id="log" class="glass" aria-live="polite"></div>
+  <nav id="ring" aria-label="Companion menu"></nav>
+
+  <div id="dock">
+    <div id="tb">
+      <input id="ti" placeholder="Speak your mind or type here…" aria-label="Message">
+      <button class="btn" id="send">Send</button>
+    </div>
+    <div id="row">
+      <button class="btn" id="menuBtn" aria-expanded="false" aria-controls="ring">✦ Menu</button>
+      <button id="orb" class="voice-orb" aria-label="Voice input">
+        <canvas id="wv" width="128" height="64"></canvas>
+      </button>
+      <button class="btn" id="kb" aria-expanded="false">⌨ Type</button>
+    </div>
+    <div id="st" role="status">Ready · tap the orb to speak</div>
+  </div>
+
+  <section id="panel" class="glass" role="dialog" aria-modal="false" aria-labelledby="pt"></section>
+  <div id="toast" role="alert"></div>
+
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    const $ = s => document.querySelector(s);
+
+    // INARO Contract-Aligned Emotional States
+    const MOODS = {
+      calm: { a: '#0ea5e9', b: '#1e1b4b', l: '#ffffff', brow: 0, smile: 0.4, eye: 0.9, sp: 0.6, pa: 0.5, asym: 0 },
+      happy: { a: '#10b981', b: '#064e3b', l: '#fff8f0', brow: -0.15, smile: 1.0, eye: 1.05, sp: 1.5, pa: 1.3, asym: 0 },
+      sad: { a: '#6366f1', b: '#1e1b4b', l: '#d3e0ff', brow: 0.35, smile: -0.5, eye: 0.8, sp: 0.4, pa: 0.3, asym: 0 },
+      concerned: { a: '#f59e0b', b: '#451a03', l: '#fff7ed', brow: 0.25, smile: -0.15, eye: 0.95, sp: 0.4, pa: 0.2, asym: 0.08 },
+      surprised: { a: '#ec4899', b: '#500724', l: '#fdf2f8', brow: -0.22, smile: 0.8, eye: 1.25, sp: 2.0, pa: 1.8, asym: 0 },
+      neutral: { a: '#8b5cf6', b: '#2e1065', l: '#ffffff', brow: 0, smile: 0.3, eye: 1.0, sp: 0.9, pa: 0.8, asym: 0 }
+    };
+
+    const mk = $('#mood');
+    Object.keys(MOODS).forEach(k => mk.add(new Option(k[0].toUpperCase() + k.slice(1), k)));
+    mk.value = 'calm';
+
+    let mood = 'calm', lang = 'en', speakOn = true, name = 'INARO', bodyCol = '#8f7bff';
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+    let rm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    mk.onchange = () => applyMood(mk.value);
+
+    function applyMood(newMood) {
+      if (!MOODS[newMood]) return;
+      mood = newMood;
+      mk.value = newMood;
+      document.body.setAttribute('data-emotion', newMood);
+    }
+
+    const cur = {
+      brow: 0, smile: 0.4, eye: 0.9, sp: 0.6, pa: 0.5, asym: 0,
+      a: new THREE.Color(MOODS.calm.a),
+      b: new THREE.Color(MOODS.calm.b),
+      l: new THREE.Color('#fff')
+    };
+
+    function toast(t) {
+      const e = $('#toast');
+      e.textContent = t;
+      e.classList.add('on');
+      clearTimeout(toast.t);
+      toast.t = setTimeout(() => e.classList.remove('on'), 3500);
+    }
+
+    // ---------- Voice & Audio State ----------
+    let state = 'idle', stream, ac, an, fdata, rec, pulse = 0, jump = 0;
+    const LAB = {
+      idle: 'Ready · tap the orb to speak',
+      listening: 'Listening… (speak in English or Tamil)',
+      transcribing: 'Transcribing…',
+      processing: 'Reflecting…',
+      speaking: 'Responding…',
+      error: 'Error'
+    };
+
+    function setState(s, msg) {
+      state = s;
+      $('#orb').className = 'voice-orb ' + s;
+      $('#st').textContent = msg || LAB[s];
+      $('#send').disabled = (s === 'processing' || s === 'speaking');
+    }
+
+    function cleanMic() {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      stream = null;
+      if (ac) ac.close().catch(() => {});
+      ac = an = null;
+    }
+
+    function fail(m) {
+      cleanMic();
+      try { rec && rec.abort(); } catch (e) {}
+      setState('error', m);
+      setTimeout(() => state === 'error' && setState('idle'), 4000);
+    }
+
+    function stopAll() {
+      cleanMic();
+      try { rec && rec.abort(); } catch (e) {}
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      setState('idle');
+    }
+
+    async function listen() {
+      if (state !== 'idle' && state !== 'error') {
+        stopAll();
+        return;
+      }
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return fail('Speech recognition is not supported in this browser. Please use the Type option.');
+      
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        return fail('Microphone access was denied or is unavailable.');
+      }
+
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      an = ac.createAnalyser();
+      an.fftSize = 64;
+      ac.createMediaStreamSource(stream).connect(an);
+      fdata = new Uint8Array(an.frequencyBinCount);
+
+      rec = new SR();
+      rec.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
+      rec.interimResults = false;
+
+      rec.onresult = e => {
+        setState('transcribing');
+        const t = e.results[0][0].transcript;
+        cleanMic();
+        send(t);
+      };
+
+      rec.onerror = e => {
+        if (e.error !== 'aborted') fail('Speech recognition error: ' + e.error);
+      };
+
+      rec.onend = () => {
+        if (state === 'listening') {
+          cleanMic();
+          setState('idle');
+          toast('Did not catch any speech. Please try again.');
+        }
+      };
+
+      try {
+        rec.start();
+        setState('listening');
+      } catch (e) {
+        fail('Could not start microphone recognition.');
+      }
+    }
+
+    const log = [];
+    function addMsg(r, t) {
+      log.push({ r, t });
+      const d = document.createElement('div');
+      d.className = 'm ' + (r === 'u' ? 'u' : '');
+      d.textContent = (r === 'u' ? 'You: ' : name + ': ') + t;
+      $('#log').appendChild(d);
+      $('#log').scrollTop = 1e5;
+    }
+
+    // Empathetic Conversation Engine with Contract Integration
+    function brain(t) {
+      const s = t.toLowerCase();
+      // Tamil support
+      if (lang === 'ta') {
+        if (/வணக்கம்|ஹலோ/.test(s)) return 'வணக்கம்! நான் உங்கள் INARO தோழன். இன்று உங்கள் மனம் எப்படி இருக்கிறது?';
+        if (/கவலை|வருத்தம்|பயம்/.test(s)) {
+          applyMood('concerned');
+          return 'நீங்கள் அமைதியற்ற நிலையில் இருப்பது புரிகிறது. உங்கள் உணர்வுகளை Dump Mode-ல் கொட்டிவிட விரும்புகிறீர்களா?';
+        }
+        return 'நான் உங்கள் குரலைக் கேட்கிறேன். தொடர்ந்து சொல்லுங்கள், நான் எப்போதும் உங்களுடன் இருக்கிறேன்.';
+      }
+
+      // Crisis & Safety keywords
+      if (/suicide|kill myself|end my life|hurt myself|want to die/.test(s)) {
+        applyMood('concerned');
+        setTimeout(() => openPanel('helpline'), 500);
+        return 'I care about you and your safety deeply. Please connect with someone who can support you right now. Opening verified helpline resources.';
+      }
+
+      if (/sad|depressed|unhappy|crying|lonely|heartbroken/.test(s)) {
+        applyMood('sad');
+        return 'I hear how heavy things feel right now. I’m right here with you. Would writing in Dump Mode help clear some space?';
+      }
+
+      if (/anxious|stress|panic|overwhelmed|nervous/.test(s)) {
+        applyMood('concerned');
+        return 'Take a gentle breath with me. You don’t have to carry it all at once. What feels like the biggest piece right now?';
+      }
+
+      if (/happy|great|good|awesome|excited|wonderful/.test(s)) {
+        applyMood('happy');
+        return 'That brings a smile to my face! What made today feel bright?';
+      }
+
+      if (/game|play|fun/.test(s)) {
+        setTimeout(() => openPanel('play'), 600);
+        return 'Let’s take a playful break! Opening the Play Zone.';
+      }
+
+      if (/study|focus|work|timer/.test(s)) {
+        setTimeout(() => openPanel('study'), 600);
+        return 'Setting a calm focus space for you. Opening the Study Space.';
+      }
+
+      if (/dump|journal|write/.test(s)) {
+        setTimeout(() => openPanel('dump'), 600);
+        return 'Taking you to your private Dump Mode. No judgment, no advice—just free space.';
+      }
+
+      if (/helpline|help|support|counseling|crisis/.test(s)) {
+        setTimeout(() => openPanel('helpline'), 500);
+        return 'Here are verified government and crisis support resources. You can tap to call anytime.';
+      }
+
+      applyMood('calm');
+      return 'I’m listening closely. Take all the time you need, or explore our menu anytime.';
+    }
+
+    async function send(t) {
+      t = t.trim();
+      if (!t) return;
+      addMsg('u', t);
+      setState('processing');
+
+      // Attempt backend API connection if active; otherwise fall back smoothly
+      let responseText = null;
+      try {
+        const res = await fetch('http://localhost:5000/api/v1/chat/characters/default/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ textContent: t, language: lang }),
+          signal: AbortSignal.timeout(1200)
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && json.data.aiResponse) {
+            responseText = json.data.aiResponse.textContent;
+            if (json.data.aiResponse.emotionRecommendation) {
+              applyMood(json.data.aiResponse.emotionRecommendation);
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback to local empathetic brain
+      }
+
+      setTimeout(() => {
+        const r = responseText || brain(t);
+        addMsg('a', r);
+        jump = 1;
+        speak(r);
+      }, 700);
+    }
+
+    function speak(t) {
+      if (!speakOn || !window.speechSynthesis) {
+        setState('idle');
+        return;
+      }
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
+      u.rate = 0.95;
+      u.pitch = 1.05;
+
+      if (lang === 'ta' && !speechSynthesis.getVoices().some(v => v.lang.startsWith('ta'))) {
+        toast('No Tamil voice synthesizer installed on this device. Displaying text.');
+        setState('idle');
+        return;
+      }
+
+      u.onstart = () => setState('speaking');
+      u.onboundary = () => pulse = 1; // Viseme lip-sync pulse
+      u.onend = () => setState('idle');
+      u.onerror = () => setState('idle');
+
+      setState('speaking');
+      speechSynthesis.speak(u);
+    }
+
+    $('#orb').onclick = listen;
+    $('#kb').onclick = () => {
+      const o = $('#tb').classList.toggle('on');
+      $('#kb').setAttribute('aria-expanded', o);
+      if (o) $('#ti').focus();
+    };
+    $('#send').onclick = () => {
+      const v = $('#ti').value;
+      $('#ti').value = '';
+      send(v);
+    };
+    $('#ti').onkeydown = e => {
+      if (e.key === 'Enter' && !$('#send').disabled) $('#send').click();
+    };
+    $('#lg').onclick = () => {
+      const o = $('#log').classList.toggle('on');
+      $('#lg').setAttribute('aria-expanded', o);
+      if (o && !log.length) {
+        $('#log').innerHTML = '<span class="note">No messages yet. Speak or type to begin your conversation.</span>';
+      }
+    };
+
+    // ---------- Radial Menu Navigation ----------
+    const ITEMS = [
+      ['dump', '🫧', 'Dump Mode'],
+      ['helpline', '📞', 'Helpline'],
+      ['study', '📚', 'Study Space'],
+      ['play', '🎮', 'Play Zone'],
+      ['garden', '🌸', 'Memory Garden'],
+      ['studio', '🎨', 'Studio']
+    ];
+
+    const ring = $('#ring');
+    ITEMS.forEach(([id, ic, lb], i) => {
+      const b = document.createElement('button');
+      b.className = 'ri';
+      b.style.setProperty('--i', i);
+      b.innerHTML = `<span aria-hidden="true">${ic}</span>${lb}`;
+      b.onclick = () => openPanel(id);
+      b.dataset.id = id;
+      ring.appendChild(b);
+    });
+
+    function layout() {
+      const w = innerWidth, h = innerHeight;
+      const cx = w / 2, cy = h * 0.44;
+      const R = Math.min(w * 0.4, h * 0.32, 220);
+      const total = ITEMS.length;
+
+      ring.querySelectorAll('.ri').forEach((b, i) => {
+        const a = -Math.PI / 2 + (i * 2 * Math.PI) / total;
+        b.style.left = cx + 'px';
+        b.style.top = cy + 'px';
+        b.style.setProperty('--x', Math.cos(a) * R * 1.15 + 'px');
+        b.style.setProperty('--y', Math.sin(a) * R + 'px');
+        b.style.setProperty('--cx', '0px');
+        b.style.setProperty('--cy', '0px');
+      });
+    }
+
+    function menu(o) {
+      ring.classList.toggle('open', o);
+      $('#menuBtn').setAttribute('aria-expanded', o);
+      if (o) ring.querySelector('.ri').focus();
+    }
+    $('#menuBtn').onclick = () => menu(!ring.classList.contains('open'));
+
+    addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        menu(false);
+        closePanel();
+        $('#menuBtn').focus();
+      }
+    });
+
+    // ---------- Slide-Up Panels ----------
+    const P = $('#panel');
+    let timer;
+
+    function closePanel() {
+      P.classList.remove('on');
+      clearInterval(timer);
+      ring.querySelectorAll('.ri').forEach(b => b.removeAttribute('aria-current'));
+    }
+
+    function openPanel(id) {
+      clearInterval(timer);
+      menu(false);
+      ring.querySelectorAll('.ri').forEach(b =>
+        b.dataset.id === id ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current')
+      );
+      const item = ITEMS.find(i => i[0] === id);
+      const t = item ? item[2] : '';
+      P.innerHTML = `<h2 id="pt">${t}<button class="btn" id="x" aria-label="Close">✕</button></h2><div id="pb"></div>`;
+      $('#x').onclick = closePanel;
+
+      const panels = { dump, helpline, study, play, garden, studio };
+      if (panels[id]) panels[id]($('#pb'));
+
+      P.classList.add('on');
+      $('#x').focus();
+    }
+
+    // Dump Mode Panel (Strict INARO Privacy)
+    function dump(el) {
+      el.innerHTML = `
+        <textarea id="dt" aria-label="Brain dump" placeholder="Write or speak whatever is on your mind. Nothing here is sent to AI models, judged, or scored."></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="rl" style="flex:1">Release Thoughts 🫧</button>
+        </div>
+        <p class="note">🔒 Private & Unanalyzed: INARO guarantees that Dump Mode entries receive no automated replies or diagnostic evaluations.</p>
+      `;
+      $('#rl').onclick = () => {
+        $('#dt').value = '';
+        toast('Released. Your mind has a fresh start.');
+        jump = 1;
+      };
+    }
+
+    // Shared Helpline Directory Panel (Click-to-Call)
+    function helpline(el) {
+      el.innerHTML = `
+        <p class="note">Verified institutional mental health support. Tapping a number opens your phone dialer without making automatic calls.</p>
+        <div class="fl">
+          <div>
+            <strong>Tele-MANAS (Govt of India)</strong><br>
+            <span class="note">24/7 National Mental Health Toll-Free Service · Tamil, English, Hindi</span>
+          </div>
+          <a class="btn" href="tel:14416" style="text-decoration:none">📞 14416</a>
+        </div>
+        <div class="fl">
+          <div>
+            <strong>KIRAN Helpline</strong><br>
+            <span class="note">Mental Health Rehabilitation Toll-Free Line · 24/7 Support</span>
+          </div>
+          <a class="btn" href="tel:18005990019" style="text-decoration:none">📞 1800-599-0019</a>
+        </div>
+        <div class="fl">
+          <div>
+            <strong>Sneha India Suicide Prevention</strong><br>
+            <span class="note">Chennai-based crisis helpline · Tamil & English</span>
+          </div>
+          <a class="btn" href="tel:04424640050" style="text-decoration:none">📞 044-24640050</a>
+        </div>
+        <p class="note">Notice: Numbers are verified public crisis resources. INARO is a supportive companion, not an emergency medical service.</p>
+      `;
+    }
+
+    // Study Space Panel (Focus Timer)
+    function study(el) {
+      let s = 1500, run = false;
+      el.innerHTML = `
+        <div style="text-align:center">
+          <div id="tm" style="font-size:3.2rem;font-weight:600;margin:10px 0">25:00</div>
+          <button class="btn" id="go">Start Focus</button>
+          <button class="btn" id="rz">Reset</button>
+          <p class="note">Companion maintains a tranquil presence while you focus.</p>
+        </div>
+      `;
+      const sh = () => $('#tm').textContent = String(s / 60 | 0).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+      $('#go').onclick = () => {
+        run = !run;
+        $('#go').textContent = run ? 'Pause' : 'Start Focus';
+        if (run) applyMood('calm');
+      };
+      $('#rz').onclick = () => {
+        s = 1500;
+        run = false;
+        $('#go').textContent = 'Start Focus';
+        sh();
+      };
+      timer = setInterval(() => {
+        if (run && s > 0) {
+          s--;
+          sh();
+          if (!s) {
+            run = false;
+            toast('Focus session completed. Take a stretch and drink water!');
+            jump = 1;
+          }
+        }
+      }, 1000);
+    }
+
+    // Play Zone (Tic-tac-toe)
+    function play(el) {
+      let b = Array(9).fill(''), over = false;
+      const W = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      const win = b => {
+        for (const [a, c, d] of W) if (b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
+        return b.every(x => x) ? 'T' : null;
+      };
+      const mm = (b, p) => {
+        const w = win(b);
+        if (w) return w === 'O' ? 1 : w === 'X' ? -1 : 0;
+        let best = p === 'O' ? -2 : 2;
+        for (let i = 0; i < 9; i++) {
+          if (!b[i]) {
+            b[i] = p;
+            const s = mm(b, p === 'O' ? 'X' : 'O');
+            b[i] = '';
+            best = p === 'O' ? Math.max(best, s) : Math.min(best, s);
+          }
+        }
+        return best;
+      };
+      function ai() {
+        const e = b.map((v, i) => v ? -1 : i).filter(i => i >= 0);
+        if (Math.random() < 0.25) return e[Math.random() * e.length | 0];
+        let bi = e[0], bs = -2;
+        for (const i of e) {
+          b[i] = 'O';
+          const s = mm(b, 'X');
+          b[i] = '';
+          if (s > bs) { bs = s; bi = i; }
+        }
+        return bi;
+      }
+      function draw(msg) {
+        const w = win(b);
+        el.innerHTML = `
+          <p class="note">Tic-tac-toe with INARO: You are ✕.</p>
+          <div class="g">${b.map((v, i) => `<button data-i="${i}" aria-label="Cell ${i + 1}" ${v || over ? 'disabled' : ''}>${v}</button>`).join('')}</div>
+          <p id="gs" role="status">${msg || ''}</p>
+          <button class="btn" id="rs">New Game</button>
+        `;
+        el.querySelectorAll('.g button').forEach(x => x.onclick = () => {
+          b[x.dataset.i] = 'X';
+          let r = win(b);
+          if (!r) {
+            b[ai()] = 'O';
+            r = win(b);
+          }
+          if (r) {
+            over = true;
+            draw(r === 'X' ? 'You won! 🎉' : r === 'O' ? 'INARO took this one! 😄' : 'Well played! A draw.');
+            if (r === 'X') jump = 1;
+          } else {
+            draw('Your turn.');
+          }
+        });
+        $('#rs').onclick = () => {
+          b = Array(9).fill('');
+          over = false;
+          draw('Your turn.');
+        };
+      }
+      draw('Your turn.');
+    }
+
+    // Memory Garden (Chat Transcripts)
+    function garden(el) {
+      function draw() {
+        const m = log.filter(x => x.r === 'u');
+        el.innerHTML = m.length
+          ? m.map((x, i) => `
+              <div class="fl">
+                <span>🌸 ${x.t.replace(/</g, '&lt;')}</span>
+                <button class="btn" data-i="${i}" aria-label="Delete entry">Delete</button>
+              </div>
+            `).join('') + '<p class="note">Privacy control: You can remove any recorded thought at any time.</p>'
+          : '<p class="note">No reflections planted yet. Converse with INARO and your shared memories will blossom here.</p>';
+        el.querySelectorAll('button').forEach(b => b.onclick = () => {
+          const t = m[b.dataset.i];
+          log.splice(log.indexOf(t), 1);
+          draw();
+        });
+      }
+      draw();
+    }
+
+    // Studio Customization Panel
+    let ac2, amb, oscs = [], vol = 0.35;
+    function studio(el) {
+      el.innerHTML = `
+        <label for="nm">Companion Name</label>
+        <input type="text" id="nm" value="${name}" maxlength="24">
+        
+        <label for="bc">Companion Hue</label>
+        <input type="color" id="bc" value="${bodyCol}">
+        
+        <label for="lg2">Language (Voice & Recognition)</label>
+        <select id="lg2">
+          <option value="en">English (Global)</option>
+          <option value="ta">தமிழ் (Tamil)</option>
+        </select>
+        
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-top:10px">
+          <input type="checkbox" id="sp" ${speakOn ? 'checked' : ''}>
+          Speak responses aloud (TTS)
+        </label>
+        
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-top:8px">
+          <input type="checkbox" id="rmc" ${rm ? 'checked' : ''}>
+          Reduced motion
+        </label>
+        
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-top:8px">
+          <input type="checkbox" id="am">
+          Ambient harmonic chime (Relaxation sound)
+        </label>
+        
+        <label for="vo">Ambient Volume</label>
+        <input type="range" id="vo" min="0" max="1" step="0.05" value="${vol}" style="width:100%">
+        
+        <p class="note">🔒 Audio Privacy: Microphone streams are analyzed locally in browser memory and never uploaded to public servers without consent.</p>
+      `;
+      $('#lg2').value = lang;
+      $('#am').checked = !!oscs.length;
+
+      $('#nm').oninput = e => {
+        name = e.target.value || 'INARO';
+        $('#ttl').firstChild.textContent = name;
+      };
+      $('#bc').oninput = e => {
+        bodyCol = e.target.value;
+        if (C) C.mat.color.set(bodyCol);
+      };
+      $('#lg2').onchange = e => {
+        lang = e.target.value;
+        toast(lang === 'ta' ? 'தமிழ் மொழி தேர்ந்தெடுக்கப்பட்டது' : 'English language active');
+      };
+      $('#sp').onchange = e => speakOn = e.target.checked;
+      $('#rmc').onchange = e => rm = e.target.checked;
+      $('#am').onchange = e => ambient(e.target.checked);
+      $('#vo').oninput = e => {
+        vol = +e.target.value;
+        if (amb) amb.gain.value = vol * 0.15;
+      };
+    }
+
+    function ambient(on) {
+      if (on) {
+        ac2 = ac2 || new (window.AudioContext || window.webkitAudioContext)();
+        ac2.resume();
+        amb = ac2.createGain();
+        amb.gain.value = vol * 0.15;
+        const f = ac2.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 750;
+        f.connect(amb);
+        amb.connect(ac2.destination);
+        oscs = [220, 277.18, 329.63, 440].map(fr => {
+          const o = ac2.createOscillator();
+          o.frequency.value = fr;
+          o.connect(f);
+          o.start();
+          return o;
+        });
+      } else {
+        oscs.forEach(o => o.stop());
+        oscs = [];
+        if (amb) amb.disconnect();
+      }
+    }
+
+    // ---------- Three.js 3D Avatar Rendering Engine ----------
+    let renderer, scene, cam, C = null;
+    const M = (c, r = 0.5) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+    const sph = (r, m, x = 1, y = 1, z = 1) => {
+      const o = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 24), m);
+      o.scale.set(x, y, z);
+      return o;
+    };
+
+    function build() {
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      scene = new THREE.Scene();
+      cam = new THREE.PerspectiveCamera(32, 1, 0.1, 60);
+
+      // Lighting
+      const hemi = new THREE.HemisphereLight(0xffffff, 0xc9d6ff, 0.95);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.85);
+      dir.position.set(3, 5, 5);
+      scene.add(hemi, dir);
+
+      // Floor Shadow
+      const fl = new THREE.Mesh(
+        new THREE.CircleGeometry(4.2, 64),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: dark ? 0.12 : 0.45 })
+      );
+      fl.rotation.x = -Math.PI / 2;
+      fl.position.y = -1.2;
+      scene.add(fl);
+
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 128;
+      const g = cv.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, 'rgba(80,60,150,0.4)');
+      gr.addColorStop(1, 'rgba(80,60,150,0)');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 128, 128);
+
+      const sh = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.8, 2.8),
+        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false })
+      );
+      sh.rotation.x = -Math.PI / 2;
+      sh.position.y = -1.19;
+      scene.add(sh);
+
+      // Materials
+      const mat = M(bodyCol, 0.42);
+      const lite = M(0xf6f2ff, 0.5);
+      const pink = M(0xffb8d6, 0.7);
+      const dk = M(0x231a38, 0.3);
+      const wh = M(0xffffff, 0.2);
+
+      const cr = new THREE.Group();
+      scene.add(cr);
+
+      // Body & Anatomy
+      const body = sph(1, mat, 1.05, 1, 0.95);
+      cr.add(body);
+
+      const belly = sph(0.6, lite, 1, 1, 0.5);
+      belly.position.set(0, -0.45, 0.55);
+      cr.add(belly);
+
+      const tail = sph(0.25, lite);
+      tail.position.set(0, -0.6, -0.9);
+      cr.add(tail);
+
+      // Ears & Cheeks
+      [-1, 1].forEach(s => {
+        const h = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.42, 16), lite);
+        h.position.set(s * 0.38, 1, 0);
+        h.rotation.z = -s * 0.4;
+        cr.add(h);
+
+        const f = sph(0.3, mat, 1.1, 0.6, 1.2);
+        f.position.set(s * 0.45, -1, 0.3);
+        cr.add(f);
+
+        const ck = sph(0.14, pink, 1, 0.7, 0.3);
+        ck.position.set(s * 0.64, -0.05, 0.72);
+        cr.add(ck);
+      });
+
+      // Arms
+      const arms = [-1, 1].map(s => {
+        const a = new THREE.Group();
+        a.position.set(s * 1, -0.1, 0.2);
+        const m = sph(0.22, mat, 0.8, 1.3, 0.8);
+        m.position.y = -0.2;
+        a.add(m);
+        cr.add(a);
+        return a;
+      });
+
+      // Eyes with pupil lookAt tracking
+      const eyes = [-1, 1].map(s => {
+        const e = new THREE.Group();
+        e.position.set(s * 0.4, 0.22, 0.8);
+        e.add(sph(0.22, wh, 1, 1.15, 0.5));
+        const p = new THREE.Group();
+        p.add(sph(0.11, dk, 1, 1.1, 0.6));
+        const hl = sph(0.035, wh);
+        hl.position.set(0.04, 0.05, 0.07);
+        p.add(hl);
+        p.position.z = 0.07;
+        e.add(p);
+        e.p = p;
+        cr.add(e);
+        return e;
+      });
+
+      // Eyebrows
+      const brows = [-1, 1].map(s => {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.06), dk);
+        b.position.set(s * 0.4, 0.58, 0.72);
+        b.rotation.x = -0.25;
+        cr.add(b);
+        return b;
+      });
+
+      // Mouths: Resting Smile Arc & Speech Viseme Ellipse
+      const mS = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.026, 8, 24, Math.PI), dk);
+      mS.position.set(0, -0.1, 0.93);
+      cr.add(mS);
+
+      const mO = sph(0.11, M(0x7a2d5a, 0.4), 1, 1, 0.3);
+      mO.position.set(0, -0.17, 0.92);
+      mO.visible = false;
+      cr.add(mO);
+
+      // Floating Charms
+      const fls = [];
+      [[-2.7, 1.3, -1, 'ico'], [2.8, 0.7, -1.5, 'oct'], [-2.3, -0.2, -2, 'tor'], [2.4, 1.9, -2, 'dod']].forEach(([x, y, z, k], i) => {
+        const geo = k === 'ico' ? new THREE.IcosahedronGeometry(0.35)
+          : k === 'oct' ? new THREE.OctahedronGeometry(0.35)
+          : k === 'tor' ? new THREE.TorusGeometry(0.3, 0.1, 12, 24)
+          : new THREE.DodecahedronGeometry(0.3);
+        const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+          color: [0xffc8e1, 0xbfe0ff, 0xd7c8ff, 0xc9f2e4][i],
+          roughness: 0.5,
+          flatShading: true
+        }));
+        m.position.set(x, y, z);
+        m.userData = { y, i };
+        scene.add(m);
+        fls.push(m);
+      });
+
+      // Floating Particle Stars
+      const N = 60, pg = new THREE.BufferGeometry(), pa = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        pa[i * 3] = (Math.random() - 0.5) * 8;
+        pa[i * 3 + 1] = Math.random() * 4 - 1;
+        pa[i * 3 + 2] = (Math.random() - 0.5) * 4 - 1;
+      }
+      pg.setAttribute('position', new THREE.BufferAttribute(pa, 3));
+      const pts = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.8 }));
+      scene.add(pts);
+
+      C = { cr, body, mat, eyes, brows, mS, mO, arms, fls, pts, pa, hemi, dir, belly };
+      resize();
+    }
+
+    function resize() {
+      const w = innerWidth, h = innerHeight;
+      if (renderer) {
+        renderer.setSize(w, h, false);
+        cam.aspect = w / h;
+        cam.position.set(0, 1.1, 8.5 / Math.min(1, cam.aspect * 1.3));
+        cam.lookAt(0, 0.1, 0);
+        cam.updateProjectionMatrix();
+      }
+      layout();
+    }
+    addEventListener('resize', resize);
+
+    // Pointer Interaction & LookAt Tracking
+    let px = 0, py = 0;
+    addEventListener('pointermove', e => {
+      px = (e.clientX / innerWidth) * 2 - 1;
+      py = -(e.clientY / innerHeight) * 2 + 1;
+    });
+
+    $('#c').addEventListener('pointerdown', e => {
+      if (!C) return;
+      const rc = new THREE.Raycaster();
+      const v = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+      rc.setFromCamera(v, cam);
+      if (rc.intersectObject(C.body).length) jump = 1;
+    });
+
+    // Initialize WebGL
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas: $('#c'), alpha: true, antialias: true });
+      build();
+    } catch (e) {
+      renderer = null;
+      $('#fb').hidden = false;
+    }
+
+    // Animation & Emotion Render Loop
+    const wv = $('#wv').getContext('2d'), clk = new THREE.Clock();
+    let blink = 0, nb = 2, lerp = THREE.MathUtils.lerp;
+
+    function tick() {
+      requestAnimationFrame(tick);
+      const dt = Math.min(clk.getDelta(), 0.05);
+      const t = clk.elapsedTime;
+      const mo = rm ? 0.2 : 1;
+      const T = MOODS[mood] || MOODS.calm;
+
+      // Interpolate emotional geometry properties
+      ['brow', 'smile', 'eye', 'sp', 'pa', 'asym'].forEach(k => cur[k] = lerp(cur[k], T[k], 0.05));
+      ['a', 'b', 'l'].forEach(k => cur[k].lerp(new THREE.Color(T[k]), 0.05));
+
+      // Mood-Responsive Gradient Background
+      const kd = dark ? 0.35 : 1;
+      const ca = cur.a.clone().multiplyScalar(kd);
+      const cb = cur.b.clone().multiplyScalar(kd);
+      $('#bg').style.background = `radial-gradient(circle at 50% 38%, ${ca.getStyle()}, ${cb.getStyle()})`;
+
+      // Mic Frequency Waveform Analysis
+      let lvl = 0, bars = null;
+      if (an && state === 'listening') {
+        an.getByteFrequencyData(fdata);
+        bars = fdata;
+        lvl = fdata.reduce((a, b) => a + b, 0) / fdata.length / 255;
+      }
+
+      pulse *= 0.88;
+      jump *= 0.92;
+
+      if (C) {
+        const { cr, eyes, brows, mS, mO, arms } = C;
+        C.hemi.color.copy(cur.l);
+        C.dir.color.copy(cur.l);
+
+        // Breathing & Bouncing
+        cr.position.y = Math.abs(Math.sin(t * cur.sp * 2)) * 0.07 * mo + jump * 0.5 * mo;
+        cr.scale.set(
+          1 + Math.sin(t * 1.6) * 0.015 * mo - jump * 0.03,
+          1 + Math.sin(t * 1.6) * 0.025 * mo + jump * 0.05,
+          1
+        );
+
+        // Character Tilt
+        const tilt = state === 'listening' ? 0.14 : state === 'processing' ? Math.sin(t * 2) * 0.1 : Math.sin(t * 0.7) * 0.04 * mo;
+        cr.rotation.z = lerp(cr.rotation.z, tilt, 0.08);
+        cr.rotation.y = lerp(cr.rotation.y, px * 0.35 * mo, 0.06);
+        cr.rotation.x = lerp(cr.rotation.x, -py * 0.12 * mo, 0.06);
+
+        // Autonomous Natural Blinking Loop
+        nb -= dt;
+        if (nb < 0) {
+          blink = 1;
+          nb = 2 + Math.random() * 3.5;
+        }
+        blink = Math.max(0, blink - dt * 7);
+        const open = cur.eye * (1 - Math.sin(blink * Math.PI) * 0.92) * (state === 'listening' ? 1.12 : 1);
+
+        // Pupil tracking
+        eyes.forEach((e, i) => {
+          e.scale.y = Math.max(0.06, open);
+          const lx = state === 'processing' ? 0.4 : px;
+          const ly = state === 'processing' ? 0.5 : py;
+          e.p.position.x = lerp(e.p.position.x, lx * 0.07, 0.1);
+          e.p.position.y = lerp(e.p.position.y, ly * 0.07, 0.1);
+        });
+
+        // Eyebrow emotional rotation
+        brows.forEach((b, i) => {
+          const s = i ? 1 : -1;
+          b.rotation.z = s * cur.brow * -1 + (i ? cur.asym : 0);
+          b.position.y = 0.58 + (i ? cur.asym * 0.3 : 0) + (cur.eye > 1.1 ? 0.06 : 0);
+        });
+
+        // Mouth & Speech-Synchronized Lip-Sync
+        const sm = cur.smile;
+        mS.rotation.z = sm >= 0 ? Math.PI : 0;
+        mS.scale.y = Math.max(0.15, Math.abs(sm));
+        mS.position.y = sm >= 0 ? -0.04 : -0.2;
+
+        const spk = state === 'speaking';
+        mS.visible = !spk;
+        mO.visible = spk;
+        if (spk) {
+          // Dynamic mouth shape scaling with utterance pulses and frequency
+          mO.scale.set(1, 0.15 + pulse * 0.9 + Math.abs(Math.sin(t * 9)) * 0.15 * pulse, 0.3);
+        }
+
+        // Arm motion
+        const wave = cur.sp > 1.5 || (state === 'speaking' && mood === 'happy');
+        arms[1].rotation.z = lerp(arms[1].rotation.z, wave ? Math.sin(t * 7) * 0.7 * mo + 0.6 : 0, 0.15);
+        arms[0].rotation.z = Math.sin(t * 1.4) * 0.06 * mo;
+
+        // Floating Charms & Particles
+        C.fls.forEach(m => {
+          m.rotation.x += dt * 0.4 * cur.sp * mo;
+          m.rotation.y += dt * 0.3 * mo;
+          m.position.y = m.userData.y + Math.sin(t * 0.8 + m.userData.i) * 0.15 * mo;
+        });
+
+        const pa = C.pa;
+        for (let i = 0; i < pa.length; i += 3) {
+          pa[i + 1] += dt * 0.2 * cur.pa * mo;
+          if (pa[i + 1] > 3.5) pa[i + 1] = -1;
+        }
+        C.pts.geometry.attributes.position.needsUpdate = true;
+        C.pts.material.opacity = 0.25 + 0.35 * Math.min(cur.pa, 1.5);
+
+        cam.position.x = lerp(cam.position.x, px * 0.4 * mo, 0.05);
+        cam.lookAt(0, 0.1, 0);
+        renderer.render(scene, cam);
+      }
+
+      // Voice Orb Waveform Canvas Rendering
+      wv.clearRect(0, 0, 128, 64);
+      wv.fillStyle = '#ffffff';
+      const n = 12;
+      for (let i = 0; i < n; i++) {
+        let a = 0.06;
+        if (bars) a = Math.max(0.06, bars[i] / 255);
+        else if (state === 'speaking') a = Math.max(0.06, pulse * (0.5 + 0.5 * Math.sin(i * 1.3 + t * 12)));
+        const h = a * 56;
+        wv.beginPath();
+        if (wv.roundRect) wv.roundRect(i * 10.4 + 2, 32 - h / 2, 6, h, 3);
+        else wv.rect(i * 10.4 + 2, 32 - h / 2, 6, h);
+        wv.fill();
+      }
+    }
+
+    layout();
+    tick();
+  </script>
+</body>
+</html>
