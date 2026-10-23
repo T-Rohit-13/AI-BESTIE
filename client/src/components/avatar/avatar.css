@@ -1,0 +1,100 @@
+/**
+ * INARO — Avatar & Interactive Companion Styles
+ * Managed by Integration Lead (Owner Scope)
+ */
+
+.avatar-viewport {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  z-index: 1;
+}
+
+.avatar-ambient-bg {
+  position: fixed;
+  inset: 0;
+  transition: background var(--theme-transition-duration, 600ms) ease;
+  z-index: 0;
+}
+
+/* Voice Orb Controller */
+.voice-orb-container {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.voice-orb {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #a594fd);
+  box-shadow: 0 10px 30px rgba(120, 90, 220, 0.45);
+  transition: transform 0.25s cubic-bezier(0.2, 1.2, 0.4, 1), background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.voice-orb:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 36px rgba(140, 110, 240, 0.6);
+}
+
+.voice-orb:active {
+  transform: scale(0.96);
+}
+
+.voice-orb.listening {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #ff8eb6);
+  animation: orb-pulse 1.2s infinite ease-in-out;
+  box-shadow: 0 0 35px rgba(255, 142, 182, 0.6);
+}
+
+.voice-orb.transcribing {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #7dc4ff);
+  box-shadow: 0 0 30px rgba(125, 196, 255, 0.5);
+}
+
+.voice-orb.processing {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #c4b5fd);
+}
+
+.voice-orb.processing::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--mood-primary, #8f7bff);
+  animation: orb-spin 0.9s linear infinite;
+}
+
+.voice-orb.speaking {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #6ee7b7);
+  box-shadow: 0 0 32px rgba(110, 231, 183, 0.5);
+}
+
+.voice-orb.error {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #fca5a5);
+  box-shadow: 0 0 28px rgba(252, 165, 165, 0.5);
+}
+
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@keyframes orb-spin {
+  to { transform: rotate(1turn); }
+}
