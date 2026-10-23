@@ -362,7 +362,7 @@ function initTrustedSetup() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           () => showToast('Location permission enabled for crisis helplines!'),
-          () => showToast('Location defaulted to National Student Helpline.')
+          () => showToast('Location defaulted to National Support Helpline.')
         );
       }
     });

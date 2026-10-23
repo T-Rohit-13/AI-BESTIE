@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>INARO — Your Space. Your Pace. | Student Mental Health & Wellness</title>
-  <meta name="description" content="INARO is an empathetic, privacy-first AI companion for college students. Talk, reflect, and be yourself in a safe, non-judgmental space.">
+  <title>INARO — Your Space. Your Pace. | Mental Health & Wellness</title>
+  <meta name="description" content="INARO is an empathetic, privacy-first AI companion. Talk, reflect, and be yourself in a safe, non-judgmental space.">
   
   <!-- Favicon and Google Fonts -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237C3AED'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>">
@@ -41,7 +41,7 @@
           </svg>
         </div>
         <div class="brand-title">
-          INARO <span class="brand-tag">Student Wellness</span>
+          INARO <span class="brand-tag">Mental Wellness</span>
         </div>
       </a>
 
@@ -76,7 +76,7 @@
               Meet your <span class="gradient-text">empathetic</span> AI companion.
             </h2>
             <p class="showcase-desc">
-              A private, non-clinical space built specifically for college students. Express your emotions without fear of judgment.
+              A private, non-clinical sanctuary built for your daily emotional peace. Express your thoughts freely without judgment.
             </p>
           </div>
 
@@ -86,7 +86,7 @@
             <div class="avatar-hint-tooltip">✦ Tap companion to say hi!</div>
           </div>
 
-          <!-- Bottom Student Badges Ribbon -->
+          <!-- Bottom Feature Badges Ribbon -->
           <div class="student-badges-ribbon">
             <div class="badge-item">
               <span class="badge-icon">🔒</span>
@@ -117,14 +117,14 @@
           <div class="screen-view active" id="screen-landing">
             <div class="landing-hero">
               <div class="landing-tagline-badge">
-                <span>🌱</span> Wellness for Campus Life
+                <span>🌱</span> Mindful Daily Wellness
               </div>
               <h1 class="landing-headline">
                 Your space. <br>
                 <span class="gradient-text">Your pace.</span>
               </h1>
               <p class="landing-subtitle">
-                A little space to talk, reflect, and be yourself. Join thousands of students caring for their minds.
+                A little space to talk, reflect, and be yourself. Join thousands of individuals caring for their minds.
               </p>
 
               <div class="landing-actions">
@@ -159,14 +159,14 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                  <span>Student Safe</span>
+                  <span>100% Safe</span>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- ===============================================================
-               SCREEN 2: SIGN-UP SCREEN
+               SCREEN 2: SIGN-UP SCREEN (Optimized Desktop View - No Overflow)
                =============================================================== -->
           <div class="screen-view" id="screen-signup">
             <div class="step-indicator-bar">
@@ -188,66 +188,70 @@
             </div>
 
             <form id="signup-form" onsubmit="event.preventDefault();">
-              <!-- Username (Mandatory) with Live Validation -->
-              <div class="form-group">
-                <label class="form-label" for="signup-username">
-                  <span>Username <span class="label-mandatory">*</span></span>
-                  <span class="label-helper">Alphanumeric, 3-20 chars</span>
-                </label>
-                <div class="input-wrapper">
-                  <input type="text" id="signup-username" class="form-input" placeholder="e.g. rohit_t" required autocomplete="username">
-                </div>
-                <div class="validation-feedback" id="username-feedback"></div>
-              </div>
-
-              <!-- Full Name (Mandatory) -->
-              <div class="form-group">
-                <label class="form-label" for="signup-name">
-                  <span>Your Name <span class="label-mandatory">*</span></span>
-                </label>
-                <div class="input-wrapper">
-                  <input type="text" id="signup-name" class="form-input" placeholder="e.g. Rohit" required autocomplete="name">
-                </div>
-              </div>
-
-              <!-- Age (Mandatory) with Helper Text -->
-              <div class="form-group">
-                <label class="form-label" for="signup-age">
-                  <span>Age <span class="label-mandatory">*</span></span>
-                  <span class="label-helper">(Must be 13 or older)</span>
-                </label>
-                <div class="input-wrapper">
-                  <input type="number" id="signup-age" class="form-input" placeholder="e.g. 21" min="13" max="120" required>
-                </div>
-                <div class="validation-feedback" id="age-feedback"></div>
-              </div>
-
-              <!-- Personal Mobile Number (Mandatory) with Country Code + Send OTP -->
-              <div class="form-group">
-                <label class="form-label" for="signup-phone">
-                  <span>Personal Mobile Number <span class="label-mandatory">*</span></span>
-                </label>
-                <div class="phone-input-group">
-                  <select id="signup-country-code" class="country-select" aria-label="Country Code">
-                    <option value="+91" selected>🇮🇳 +91</option>
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+44">🇬🇧 +44</option>
-                    <option value="+65">🇸🇬 +65</option>
-                    <option value="+61">🇦🇺 +61</option>
-                  </select>
-                  <div class="phone-with-action">
-                    <input type="tel" id="signup-phone" class="form-input input-has-icon-right" placeholder="10-digit mobile" maxlength="10" required autocomplete="tel-national">
-                    <button type="button" id="send-otp-btn" class="send-otp-btn" disabled>Send OTP</button>
+              <!-- 2-Column Row 1: Username & Full Name -->
+              <div class="form-row-2col">
+                <!-- Username (Mandatory) with Live Validation -->
+                <div class="form-group">
+                  <label class="form-label" for="signup-username">
+                    <span>Username <span class="label-mandatory">*</span></span>
+                  </label>
+                  <div class="input-wrapper">
+                    <input type="text" id="signup-username" class="form-input" placeholder="e.g. rohit_t" required autocomplete="username">
                   </div>
+                  <div class="validation-feedback" id="username-feedback"></div>
+                </div>
+
+                <!-- Full Name (Mandatory) -->
+                <div class="form-group">
+                  <label class="form-label" for="signup-name">
+                    <span>Your Name <span class="label-mandatory">*</span></span>
+                  </label>
+                  <div class="input-wrapper">
+                    <input type="text" id="signup-name" class="form-input" placeholder="e.g. Rohit" required autocomplete="name">
+                  </div>
+                  <div class="validation-feedback"></div>
                 </div>
               </div>
 
-              <!-- Helper Banner Explaining OTP Verification -->
-              <div class="helper-banner">
-                <div class="helper-banner-icon">ℹ️</div>
-                <div>
-                  <strong>Why we verify your phone:</strong> We will send a secure 4-digit OTP to guarantee privacy and account safety. We never spam or sell numbers.
+              <!-- 2-Column Row 2: Age & Mobile Number -->
+              <div class="form-row-2col">
+                <!-- Age (Mandatory) with Helper Text -->
+                <div class="form-group">
+                  <label class="form-label" for="signup-age">
+                    <span>Age <span class="label-mandatory">*</span></span>
+                    <span class="label-helper">(13+)</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <input type="number" id="signup-age" class="form-input" placeholder="e.g. 21" min="13" max="120" required>
+                  </div>
+                  <div class="validation-feedback" id="age-feedback"></div>
                 </div>
+
+                <!-- Personal Mobile Number (Mandatory) with Country Code + Send OTP -->
+                <div class="form-group">
+                  <label class="form-label" for="signup-phone">
+                    <span>Mobile Number <span class="label-mandatory">*</span></span>
+                  </label>
+                  <div class="phone-input-group">
+                    <select id="signup-country-code" class="country-select" aria-label="Country Code">
+                      <option value="+91" selected>🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+65">🇸🇬 +65</option>
+                    </select>
+                    <div class="phone-with-action">
+                      <input type="tel" id="signup-phone" class="form-input input-has-icon-right" placeholder="10-digit number" maxlength="10" required autocomplete="tel-national">
+                      <button type="button" id="send-otp-btn" class="send-otp-btn" disabled>Send OTP</button>
+                    </div>
+                  </div>
+                  <div class="validation-feedback"></div>
+                </div>
+              </div>
+
+              <!-- Compact Helper Banner Explaining OTP Verification -->
+              <div class="helper-banner">
+                <span class="helper-banner-icon">🔒</span>
+                <div>We will send a secure 4-digit OTP to verify your mobile number. Safe & confidential.</div>
               </div>
 
               <!-- Submit CTA -->
@@ -383,7 +387,7 @@
                 <span>Location-Based Helpline Support</span>
               </div>
               <p class="setup-section-desc">
-                Enables immediate mapping to local university counselling and state crisis resources.
+                Enables immediate mapping to local verified counselling and crisis support resources.
               </p>
               
               <div class="location-toggle-box">
