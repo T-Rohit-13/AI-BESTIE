@@ -25,7 +25,8 @@ import {
   deleteAllDumpEntries,
 } from '../../services/api';
 import { DumpEntry } from '../../types/contracts';
-import { SanctuaryAvatar, SanctuaryMood } from '../avatar/SanctuaryAvatar';
+import { Companion3DAvatar } from '../avatar/Companion3DAvatar';
+import { SanctuaryMood } from '../avatar/SanctuaryAvatar';
 import { detectToneFromText } from '../../services/toneDetector';
 
 // Mood options with accessible labels and 1-5 integer mappings
@@ -553,24 +554,35 @@ export const DumpModePage: React.FC = () => {
         </header>
 
         {/* ------------------------------------------------------------------- */}
-        {/* 2. UNIQUE SANCTUARY AVATAR (Listens & changes facial expression) */}
+        {/* 2. 3D COMPANION MASCOT AVATAR (Listens & shifts expression with tone) */}
         {/* ------------------------------------------------------------------- */}
-        <section className="flex flex-col items-center justify-center my-4 sm:my-6">
-          <SanctuaryAvatar
-            mood={avatarMood}
-            isListening={isListening}
-            isReleasing={isReleasing}
-          />
+        <section className="flex flex-col items-center justify-center my-3 sm:my-5">
+          <div className="w-full max-w-sm h-64 sm:h-72 rounded-3xl overflow-hidden shadow-lg border border-purple-200/80 bg-gradient-to-b from-[#1a153a] to-[#0c0926] relative">
+            <Companion3DAvatar
+              emotion={avatarMood}
+              isSpeaking={false}
+              isThinking={isListening}
+              characterName="INARO Mascot"
+              className="w-full h-full"
+            />
+            {isReleasing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-purple-900/40 backdrop-blur-xs animate-fade-in pointer-events-none">
+                <span className="text-xs font-bold text-white px-3.5 py-1.5 rounded-full bg-purple-600/90 shadow-md">
+                  ✨ Released into peace
+                </span>
+              </div>
+            )}
+          </div>
 
-          <div className="text-center mt-2">
+          <div className="text-center mt-3">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 border border-purple-100 text-slate-700 shadow-2xs">
               <span>Tone:</span>
               <span className="capitalize text-purple-700 font-bold">{avatarMood}</span>
             </span>
             <p className="text-[11px] text-slate-400 mt-1">
               {isListening
-                ? 'Speaking your mind... the spirit listens and empathizes with your tone.'
-                : 'Tap "Dump It" to speak freely. The spirit listens without judgment.'}
+                ? 'Speaking freely... your companion listens attentively and reflects your emotion.'
+                : 'Tap "Dump It" to speak freely. Your companion listens without judgment.'}
             </p>
           </div>
         </section>

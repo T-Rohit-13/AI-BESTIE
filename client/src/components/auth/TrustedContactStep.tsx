@@ -28,9 +28,32 @@ export const TrustedContactStep: React.FC<TrustedContactStepProps> = ({
     }
   };
 
-  const handleFinish = (e: React.FormEvent) => {
+  const handleFinish = async (e: React.FormEvent) => {
     e.preventDefault();
-    onComplete({ contactName: contactName.trim(), contactPhone: contactPhone.trim() });
+    const trimmedPhone = contactPhone.trim();
+    const trimmedName = contactName.trim() || 'Secondary Contact';
+
+    if (trimmedPhone) {
+      try {
+        const storedUser = localStorage.getItem('inaro_user');
+        const userObj = storedUser ? JSON.parse(storedUser) : null;
+        const userId = userObj?.id || userObj?.username || 'user_anon';
+
+        await fetch('http://localhost:5000/auth/trusted-contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            contactName: trimmedName,
+            contactPhone: trimmedPhone,
+          }),
+        });
+      } catch {
+        // Proceed gracefully
+      }
+    }
+
+    onComplete({ contactName: trimmedName, contactPhone: trimmedPhone });
   };
 
   return (

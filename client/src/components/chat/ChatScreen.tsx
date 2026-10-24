@@ -194,6 +194,7 @@ export const ChatScreen: React.FC = () => {
     isResponding,
     sendMessage,
     initCharacterChat,
+    addCompanionMessage,
   } = useChat();
 
   const character = characterId ? getCharacterById(characterId) : undefined;
@@ -240,10 +241,9 @@ export const ChatScreen: React.FC = () => {
   const [studySeconds, setStudySeconds] = useState<number>(1500);
   const [isStudyRunning, setIsStudyRunning] = useState<boolean>(false);
 
-
-
-
-
+  // Gemini API Key Modal state
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState<boolean>(false);
+  const [apiKeyInput, setApiKeyInput] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
   // DOM Refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const bgRef = useRef<HTMLDivElement | null>(null);
@@ -432,8 +432,22 @@ export const ChatScreen: React.FC = () => {
         return;
       }
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
+      const cleanText = text.replace(/[*_#`~[\]]/g, '').trim();
+      const u = new SpeechSynthesisUtterance(cleanText);
       u.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
+
+      // Female voice selection: priority given to natural female voices
+      const voices = window.speechSynthesis.getVoices();
+      const femaleVoice =
+        voices.find((v) => /female|jenny|zira|samantha|victoria|karen|siri/i.test(v.name)) ||
+        voices.find((v) => v.lang.startsWith('en') && /female/i.test(v.name)) ||
+        voices.find((v) => v.lang.startsWith('en'));
+
+      if (femaleVoice) {
+        u.voice = femaleVoice;
+      }
+      u.pitch = 1.18; // Warm soothing friendly female pitch
+      u.rate = 1.0;
 
       u.onstart = () => {
         setVoiceState('speaking');
@@ -505,7 +519,8 @@ export const ChatScreen: React.FC = () => {
 
       // 3. Send message to chat store & API
       try {
-        await sendMessage(characterId, cleanText);
+        const activeKey = localStorage.getItem('gemini_api_key') || undefined;
+        await sendMessage(characterId, cleanText, activeKey);
       } catch (e) {
         // Handled gracefully in context
       }
@@ -1108,7 +1123,7 @@ export const ChatScreen: React.FC = () => {
     };
   }, [stopAllAudio, toggleAmbientSound]);
 
-  // Tic-Tac-Toe Game Logic
+  // Tic-Tac-Toe Game Logic with interactive companion banter
   const handleCellClick = (index: number) => {
     if (gameBoard[index] || isGameOver) return;
     const newBoard = [...gameBoard];
@@ -1132,12 +1147,13 @@ export const ChatScreen: React.FC = () => {
     };
 
     let result = checkWin(newBoard);
+    let companionPlaced = -1;
     if (!result) {
       // AI Move
       const empties = newBoard.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
       if (empties.length > 0) {
-        const aiPick = empties[Math.floor(Math.random() * empties.length)];
-        newBoard[aiPick] = 'O';
+        companionPlaced = empties[Math.floor(Math.random() * empties.length)];
+        newBoard[companionPlaced] = 'O';
         result = checkWin(newBoard);
       }
     }
@@ -1147,16 +1163,45 @@ export const ChatScreen: React.FC = () => {
       setIsGameOver(true);
       if (result === 'X') {
         setGameStatus('You win! 🎉 Amazing game!');
-        threeRef.current.jump = 1;
+        threeRef.current.jump = 2;
         setMood('happy');
+        if (characterId) {
+          addCompanionMessage(
+            characterId,
+            `OMG you won!! 🎉 That was a brilliant move! You're unstoppable bestie! Rematch whenever you're ready! 😄`
+          );
+        }
       } else if (result === 'O') {
         setGameStatus(`${companionName} wins this round! 😄 Rematch?`);
-        threeRef.current.jump = 1;
+        threeRef.current.jump = 1.3;
+        setMood('excited');
+        if (characterId) {
+          addCompanionMessage(
+            characterId,
+            `Three in a row! I win this round! 😄 That was such a fun game though—rematch? 🎮`
+          );
+        }
       } else {
         setGameStatus('A balanced tie! 🤝 Well played!');
+        setMood('calm');
+        if (characterId) {
+          addCompanionMessage(
+            characterId,
+            `A balanced tie! 🤝 Great minds think alike! Want to play again or try a riddle? ✨`
+          );
+        }
       }
     } else {
       setGameStatus('Your turn (✕).');
+      if (companionPlaced >= 0 && characterId) {
+        const movesBanter = [
+          `I put my O right there! ✨ Your turn ✕!`,
+          `Ooh nice placement! Here's my play! Your turn! 😄`,
+          `Blocking you right here! Hehe, your move! 🎮`,
+        ];
+        const pick = movesBanter[Math.floor(Math.random() * movesBanter.length)];
+        addCompanionMessage(characterId, pick);
+      }
     }
   };
 
@@ -1164,11 +1209,42 @@ export const ChatScreen: React.FC = () => {
     setGameBoard(Array(9).fill(''));
     setGameStatus('Your turn (✕).');
     setIsGameOver(false);
+    if (characterId) {
+      addCompanionMessage(characterId, `Fresh game started! 🎮 You make the first move as ✕! Good luck bestie! ✨`);
+    }
+  };
+
+  const handlePlayWouldYouRather = () => {
+    if (!characterId) return;
+    const questions = [
+      `Would you rather have infinite cozy rain outside with endless hot chocolate, or a warm sunny beach day with unlimited ice cream? 🍦 Tell me!`,
+      `Would you rather be able to pause time whenever you need a nap, or be able to teleport anywhere in the world instantly? ✨`,
+      `Would you rather always know what your pets are thinking, or be fluent in every human language in the world? 🐶`,
+    ];
+    const q = questions[Math.floor(Math.random() * questions.length)];
+    addCompanionMessage(characterId, `🎲 Would You Rather time! Here is your question:\n"${q}"`);
+    threeRef.current.jump = 1;
+    setMood('happy');
+    showToast('Sent game question to chat!');
+  };
+
+  const handlePlayRiddle = () => {
+    if (!characterId) return;
+    const riddles = [
+      `🧠 Riddle time! "I have branches, but no fruit, trunk or leaves. What am I?" (Hint: think rivers or money!) Type your guess in chat! 😄`,
+      `🧠 Here's a cozy riddle: "What can you catch, but never throw?" (Hint: it happens in winter!) What's your answer? ✨`,
+      `🧠 Bestie riddle: "What has a thumb and four fingers, but is not alive?" Type your guess! 🧤`,
+    ];
+    const r = riddles[Math.floor(Math.random() * riddles.length)];
+    addCompanionMessage(characterId, r);
+    threeRef.current.jump = 1;
+    setMood('excited');
+    showToast('Companion asked a riddle in chat!');
   };
 
   // Radial Ring Items
   const RADIAL_ITEMS = [
-    { id: 'play', icon: '🎮', label: 'Play Zone' },
+    { id: 'play', icon: '🎮', label: 'Play Games' },
     { id: 'study', icon: '📚', label: 'Study Space' },
     { id: 'studio', icon: '🎨', label: 'Studio' },
   ];
@@ -1262,6 +1338,33 @@ export const ChatScreen: React.FC = () => {
             </button>
           )}
 
+          {/* Female Voice Toggle Button */}
+          <button
+            onClick={() => {
+              const next = !speakOn;
+              setSpeakOn(next);
+              if (!next && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+              }
+              showToast(next ? 'Female Voice Audio: Active 🔊' : 'Voice Audio: Muted 🔇');
+            }}
+            className={`studio-btn py-1 px-3 text-xs font-semibold ${speakOn ? 'bg-purple-100/90 text-purple-900 border-purple-300' : 'text-slate-600'}`}
+            title={speakOn ? 'Female voice audio enabled. Click to mute.' : 'Audio muted. Click to hear companion in female voice.'}
+            aria-label="Toggle companion voice speech"
+          >
+            <span>{speakOn ? '🔊 Voice' : '🔇 Mute'}</span>
+          </button>
+
+          {/* Gemini API Key Configuration Button */}
+          <button
+            onClick={() => setApiKeyModalOpen(true)}
+            className="studio-btn py-1 px-3 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200"
+            title="Configure Gemini API Key"
+            aria-label="Configure Gemini API Key"
+          >
+            <span>🔑 Gemini Key</span>
+          </button>
+
           {/* Transcript / Chat Log Button */}
           <button
             id="lg"
@@ -1308,6 +1411,14 @@ export const ChatScreen: React.FC = () => {
               onClick={() => {
                 setIsMenuOpen(false);
                 setActivePanel(item.id);
+                if (item.id === 'play' && characterId) {
+                  addCompanionMessage(
+                    characterId,
+                    `Yay! Let's play games together! 🎮 We're playing Tic-Tac-Toe right now—you're ✕ and I'm O. Make your move on the board, or pick Would You Rather or a Riddle! ✨`
+                  );
+                  threeRef.current.jump = 1.3;
+                  setMood('happy');
+                }
               }}
               data-id={item.id}
               aria-current={activePanel === item.id ? 'true' : undefined}
@@ -1428,29 +1539,73 @@ export const ChatScreen: React.FC = () => {
         </div>
 
         <div id="pb" className="text-slate-700 text-sm">
-          {/* 1. PLAY ZONE */}
+          {/* 1. PLAY GAMES ZONE */}
           {activePanel === 'play' && (
-            <div>
-              <p className="note">Tic-tac-toe with {companionName}. You are ✕.</p>
-              <div className="game-grid">
-                {gameBoard.map((val, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleCellClick(idx)}
-                    disabled={!!val || isGameOver}
-                    aria-label={`Cell ${idx + 1} ${val || 'empty'}`}
-                  >
-                    {val}
-                  </button>
-                ))}
+            <div className="space-y-4">
+              <div className="p-3 bg-purple-50/70 rounded-2xl border border-purple-200/70">
+                <p className="note text-xs font-semibold text-purple-900 m-0">
+                  🎮 Interactive Games with {companionName}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1 m-0">
+                  {companionName} plays along directly in your chat with live banter and moves!
+                </p>
               </div>
-              <p id="gs" className="text-center font-bold text-purple-700 my-2">
-                {gameStatus}
-              </p>
-              <div className="flex justify-center mt-3">
-                <button onClick={resetGame} className="studio-btn">
-                  New Game
-                </button>
+
+              {/* Tic-Tac-Toe Arena */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-800">🎯 Tic-Tac-Toe</span>
+                  <span className="text-xs font-semibold text-purple-700">You: ✕ | {companionName}: O</span>
+                </div>
+                <div className="game-grid">
+                  {gameBoard.map((val, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleCellClick(idx)}
+                      disabled={!!val || isGameOver}
+                      aria-label={`Cell ${idx + 1} ${val || 'empty'}`}
+                      className="font-bold text-lg"
+                    >
+                      {val}
+                    </button>
+                  ))}
+                </div>
+                <p id="gs" className="text-center font-bold text-purple-700 my-2 text-xs">
+                  {gameStatus}
+                </p>
+                <div className="flex justify-center mt-2">
+                  <button onClick={resetGame} className="studio-btn text-xs py-1.5 px-3">
+                    🔄 Rematch
+                  </button>
+                </div>
+              </div>
+
+              {/* More Games with Companion */}
+              <div className="pt-3 border-t border-purple-100/80">
+                <p className="text-xs font-bold text-slate-800 mb-2">✨ Quick Bestie Games</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handlePlayWouldYouRather}
+                    className="p-2.5 rounded-xl bg-white hover:bg-purple-50 border border-purple-200/80 text-left transition group shadow-2xs cursor-pointer"
+                  >
+                    <span className="block text-base mb-0.5">🎲</span>
+                    <span className="block text-xs font-bold text-slate-800 group-hover:text-purple-700">
+                      Would You Rather
+                    </span>
+                    <span className="block text-[10px] text-slate-400">Cozy dilemma fun</span>
+                  </button>
+
+                  <button
+                    onClick={handlePlayRiddle}
+                    className="p-2.5 rounded-xl bg-white hover:bg-purple-50 border border-purple-200/80 text-left transition group shadow-2xs cursor-pointer"
+                  >
+                    <span className="block text-base mb-0.5">🧠</span>
+                    <span className="block text-xs font-bold text-slate-800 group-hover:text-purple-700">
+                      Bestie Riddle
+                    </span>
+                    <span className="block text-[10px] text-slate-400">Mind-bending teasers</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1630,6 +1785,80 @@ export const ChatScreen: React.FC = () => {
             }
           }}
         />
+      )}
+
+      {/* Gemini API Key Configuration Modal */}
+      {apiKeyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-purple-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🔑</span>
+                <h3 className="text-lg font-bold text-slate-900">Gemini API Key</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApiKeyModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
+              Enter your Google Gemini API key to power your companion's empathetic responses. Your companion acts strictly as your loving best friend and will gently refuse academic research, Wikipedia dissertations, and search queries.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Google Gemini API Key
+              </label>
+              <input
+                type="password"
+                className="w-full px-3 py-2.5 rounded-xl border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 text-xs font-mono outline-none"
+                placeholder="AIzaSy..."
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+              />
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                Keys can also be placed in <code>server/.env</code> as <code>GEMINI_API_KEY=...</code>
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              {apiKeyInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('gemini_api_key');
+                    setApiKeyInput('');
+                    showToast('Gemini API Key removed.');
+                  }}
+                  className="px-3 py-2 rounded-xl text-xs text-rose-600 hover:bg-rose-50"
+                >
+                  Clear Key
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmed = apiKeyInput.trim();
+                  if (trimmed) {
+                    localStorage.setItem('gemini_api_key', trimmed);
+                    showToast('Gemini API Key saved successfully! ✨');
+                  } else {
+                    localStorage.removeItem('gemini_api_key');
+                    showToast('Key cleared.');
+                  }
+                  setApiKeyModalOpen(false);
+                }}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-md shadow-purple-600/20"
+              >
+                Save Key
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

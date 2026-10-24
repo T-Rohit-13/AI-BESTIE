@@ -5,11 +5,12 @@ import * as api from '../services/api';
 interface ChatContextType {
   getMessages: (characterId: string) => ChatMessage[];
   isResponding: (characterId: string) => boolean;
-  sendMessage: (characterId: string, text: string) => Promise<void>;
+  sendMessage: (characterId: string, text: string, apiKey?: string) => Promise<void>;
   sendVoiceMessage: (characterId: string, audioBlob: Blob, durationSeconds: number) => Promise<void>;
   retryMessage: (characterId: string, messageId: string) => Promise<void>;
   clearScreen: (characterId: string) => Promise<void>;
   initCharacterChat: (characterId: string, characterName: string, preset: string) => void;
+  addCompanionMessage: (characterId: string, text: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -105,7 +106,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     []
   );
 
-  const sendMessage = async (characterId: string, text: string) => {
+  const sendMessage = async (characterId: string, text: string, apiKey?: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
@@ -128,7 +129,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRespondingByCharacter((prev) => ({ ...prev, [characterId]: true }));
 
     try {
-      const response = await api.sendChatMessage(characterId, trimmed);
+      const response = await api.sendChatMessage(characterId, trimmed, apiKey);
 
       // Mark user message as sent
       setMessagesByCharacter((prev) => ({
@@ -155,27 +156,44 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         [characterId]: [...(prev[characterId] || []), aiMessage],
       }));
     } catch {
-      // Mock friendly AI fallback for smooth demonstration if backend is offline
+      // Friendly best friend fallback when backend is unreachable
+      const lower = trimmed.toLowerCase();
+      let reply = "I hear you! I love that we can talk about anything together like best friends. Tell me more! ✨";
+      if (/\b(research|wikipedia|google this|scientific paper|dissertation|academic bibliography|generate image|search web|cite sources)\b/i.test(lower)) {
+        reply = "Haha hey, remember I'm your best friend, not Google or a research encyclopedia! 🫂 I'm here to listen to your feelings, vibe with you, talk about your day, and play games. How are you actually feeling right now?";
+      } else if (/\b(tic-tac-toe|play|game|would you rather|riddle|word association)\b/i.test(lower)) {
+        reply = "Yay, game time! 🎮 I'm ready! Open my Play Games tab to make your move in Tic-Tac-Toe, or ask me Would You Rather or a riddle! ✨";
+      } else if (/\b(sad|down|crying|lonely|heartbroken|depressed|hurt|exhausted)\b/i.test(lower)) {
+        reply = "I hear you, and I'm right here beside you. 🫂 It's completely okay to feel down. Do you want to vent more about it, or would you like to just sit together quietly? 🌸";
+      } else if (/\b(stress|stressed|anxious|anxiety|panic|overwhelmed|exam)\b/i.test(lower)) {
+        reply = "Hey, take a slow breath with me right now. Inhale... exhale. 🌸 You don't have to carry the whole world today. We'll take this one tiny step at a time together.";
+      } else if (/^(hi|hello|hey|yo|sup)/i.test(lower)) {
+        reply = "Hey there! 😄 It's always so comforting seeing you pop in. How's your day treating you today?";
+      }
+
       setTimeout(() => {
         setMessagesByCharacter((prev) => {
           const list = prev[characterId] || [];
-          // Mark sent
           const updated = list.map((m) => (m.id === userMsgId ? { ...m, status: 'sent' as const } : m));
           const aiMessage: ChatMessage = {
             id: `ai_${Date.now()}`,
             characterId,
             sender: 'ai',
-            text: `Thank you for sharing that with me. It takes courage to open up, and I want to support you through whatever you are experiencing.`,
+            text: reply,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             status: 'sent',
           };
+          const finalList = [...updated, aiMessage];
+          try {
+            localStorage.setItem(`${CHAT_STORAGE_PREFIX}${characterId}`, JSON.stringify(finalList));
+          } catch {}
           return {
             ...prev,
-            [characterId]: [...updated, aiMessage],
+            [characterId]: finalList,
           };
         });
         setRespondingByCharacter((prev) => ({ ...prev, [characterId]: false }));
-      }, 900);
+      }, 700);
       return;
     } finally {
       setRespondingByCharacter((prev) => ({ ...prev, [characterId]: false }));
@@ -309,6 +327,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   }, [messagesByCharacter]);
 
+  const addCompanionMessage = useCallback((characterId: string, text: string) => {
+    const aiMessage: ChatMessage = {
+      id: `ai_game_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      characterId,
+      sender: 'ai',
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sent',
+    };
+    setMessagesByCharacter((prev) => {
+      const existing = prev[characterId] || [];
+      const updated = [...existing, aiMessage];
+      try {
+        localStorage.setItem(`${CHAT_STORAGE_PREFIX}${characterId}`, JSON.stringify(updated));
+      } catch {}
+      return {
+        ...prev,
+        [characterId]: updated,
+      };
+    });
+  }, []);
+
   return (
     <ChatContext.Provider
       value={{
@@ -319,6 +359,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         retryMessage,
         clearScreen,
         initCharacterChat,
+        addCompanionMessage,
       }}
     >
       {children}

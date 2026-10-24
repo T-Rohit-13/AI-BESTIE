@@ -18,11 +18,13 @@ export interface MoodVisualProfile {
   asym: number;
 }
 
-export const MOOD_PROFILES: Record<EmotionLabel, MoodVisualProfile> = {
+export const MOOD_PROFILES: Record<string, MoodVisualProfile> = {
   calm: { a: '#0ea5e9', b: '#1e1b4b', l: '#ffffff', brow: 0, smile: 0.4, eye: 0.9, sp: 0.6, pa: 0.5, asym: 0 },
   happy: { a: '#10b981', b: '#064e3b', l: '#fff8f0', brow: -0.15, smile: 1.0, eye: 1.05, sp: 1.5, pa: 1.3, asym: 0 },
   sad: { a: '#6366f1', b: '#1e1b4b', l: '#d3e0ff', brow: 0.35, smile: -0.5, eye: 0.8, sp: 0.4, pa: 0.3, asym: 0 },
   concerned: { a: '#f59e0b', b: '#451a03', l: '#fff7ed', brow: 0.25, smile: -0.15, eye: 0.95, sp: 0.4, pa: 0.2, asym: 0.08 },
+  angry: { a: '#ef4444', b: '#450a0a', l: '#ffe4e6', brow: 0.45, smile: -0.4, eye: 0.85, sp: 0.7, pa: 0.5, asym: 0 },
+  anxious: { a: '#f59e0b', b: '#451a03', l: '#fffbeb', brow: 0.3, smile: -0.2, eye: 1.15, sp: 0.7, pa: 0.4, asym: 0.12 },
   surprised: { a: '#ec4899', b: '#500724', l: '#fdf2f8', brow: -0.22, smile: 0.8, eye: 1.25, sp: 2.0, pa: 1.8, asym: 0 },
   neutral: { a: '#8b5cf6', b: '#2e1065', l: '#ffffff', brow: 0, smile: 0.3, eye: 1.0, sp: 0.9, pa: 0.8, asym: 0 }
 };

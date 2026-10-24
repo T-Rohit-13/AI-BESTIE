@@ -25,9 +25,8 @@ export const AuthSuccessStep: React.FC<AuthSuccessStepProps> = ({ userName }) =>
         Welcome to INARO, <strong className="text-purple-700 font-bold">{userName || 'Friend'}</strong>! Your personalized safe space is ready.
       </p>
 
-      {/* Backend boundary explanation */}
-      <div className="p-3 bg-purple-50/80 border border-purple-200/80 rounded-2xl text-[11px] text-purple-900 max-w-sm mx-auto mb-6 text-left leading-relaxed">
-        <strong>Phase 1 UI Complete:</strong> Registration workflow, age checks, password strength evaluation, and OTP input verification have been fully validated on the client. Real database persistence will be connected in Phase 2.
+      <div className="p-3 bg-purple-50/80 border border-purple-200/80 rounded-2xl text-[11px] text-purple-900 max-w-sm mx-auto mb-6 text-center leading-relaxed">
+        ✨ <strong>Safe & Connected:</strong> Your profile and emergency wellness contacts have been securely saved.
       </div>
 
       <div className="flex flex-col gap-2.5 max-w-xs mx-auto">

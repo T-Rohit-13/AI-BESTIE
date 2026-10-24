@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest run",
+    "train:tone": "tsx src/trainModel.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "start:auth": "node src/modules/auth/server.js"

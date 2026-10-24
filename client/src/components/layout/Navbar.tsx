@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDailyEntry } from '../../context/DailyEntryContext';
-import { HeartHandshake, Smile, MessageCircleHeart, Sparkles, User, PhoneCall } from 'lucide-react';
+import { HeartHandshake, Smile, MessageCircleHeart, Sparkles, User } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -98,19 +98,6 @@ export const Navbar: React.FC = () => {
           >
             <Sparkles className="w-4 h-4 text-purple-600" />
             <span>Let It Out</span>
-          </Link>
-
-          <Link
-            to="/support"
-            className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
-              isSupport
-                ? 'bg-rose-100 text-rose-800 shadow-sm'
-                : 'text-rose-700 bg-rose-50/70 hover:bg-rose-100/80 hover:text-rose-800'
-            }`}
-            title="Immediate Crisis Helpline & Verified Directory"
-          >
-            <PhoneCall className="w-4 h-4 text-rose-600 animate-pulse" />
-            <span>Helpline</span>
           </Link>
         </nav>
 

@@ -84,6 +84,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'signin' }) =>
                 <OtpVerifyStep
                   mobileNumber={signUpData.mobileNumber}
                   countryCode={signUpData.countryCode}
+                  signUpData={signUpData}
                   onVerified={() => setStep('trusted-setup')}
                   onBack={() => setStep('signup')}
                 />

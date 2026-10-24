@@ -4,7 +4,7 @@ import { MOOD_PROFILES, MoodVisualProfile } from './Avatar3D';
 import { CuteMascot } from './CuteMascot';
 
 interface Companion3DAvatarProps {
-  emotion?: EmotionLabel;
+  emotion?: EmotionLabel | 'angry' | 'anxious' | string;
   isSpeaking?: boolean;
   isThinking?: boolean;
   characterName?: string;
@@ -30,7 +30,7 @@ export const Companion3DAvatar: React.FC<Companion3DAvatarProps> = ({
   });
 
   // State refs to keep loop references up-to-date without recreating scene
-  const emotionRef = useRef<EmotionLabel>(emotion);
+  const emotionRef = useRef<string>(emotion);
   const isSpeakingRef = useRef<boolean>(isSpeaking);
   const isThinkingRef = useRef<boolean>(isThinking);
 

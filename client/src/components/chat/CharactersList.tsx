@@ -66,8 +66,8 @@ export const CharactersList: React.FC = () => {
             A little space to talk, reflect, and be yourself. Choose or create a companion to express your thoughts freely without judgment.
           </p>
 
-          {/* Action Buttons: Create, Daily Check-In, and Dedicated Crisis Helpline */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xl mx-auto mb-6">
+          {/* Action Buttons: Create and Daily Check-In */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto mb-6">
             <button
               onClick={handleOpenCreate}
               className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 transition cursor-pointer"
@@ -83,15 +83,6 @@ export const CharactersList: React.FC = () => {
               <Smile className="w-4 h-4 text-purple-600" />
               <span>Daily Check-In</span>
             </button>
-
-            <Link
-              to="/support"
-              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs sm:text-sm border border-rose-200/80 shadow-2xs hover:border-rose-300 transition cursor-pointer"
-              title="Verified Crisis Helplines & Emergency Support"
-            >
-              <PhoneCall className="w-4 h-4 text-rose-600 animate-pulse" />
-              <span>Crisis Helpline</span>
-            </Link>
           </div>
 
           {/* Feature Badges */}
@@ -213,17 +204,18 @@ export const CharactersList: React.FC = () => {
         initialCharacter={editingCharacter}
       />
 
-      {/* Dedicated Floating Helpline Button on Home Page */}
+      {/* Small Floating Helpline Icon in Bottom Corner */}
       <aside className="fixed bottom-6 right-6 z-40">
         <Link
           to="/support"
-          className="flex items-center gap-2 px-4 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-rose-600/30 hover:shadow-rose-600/50 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
-          title="Need immediate help? Reach verified crisis helplines 24/7"
-          aria-label="Open Crisis Helpline directory"
+          className="relative flex items-center justify-center w-12 h-12 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/35 hover:scale-110 active:scale-95 transition-all cursor-pointer group"
+          title="24/7 Crisis Helpline & Support"
+          aria-label="Open 24/7 Crisis Helpline directory"
         >
-          <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
-          <PhoneCall className="w-4 h-4" />
-          <span>Need Help? SOS Helpline</span>
+          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-rose-400 animate-ping" />
+          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-rose-300 border-2 border-white" />
+          <PhoneCall className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+          <span className="sr-only">Helpline</span>
         </Link>
       </aside>
     </div>

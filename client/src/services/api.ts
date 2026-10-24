@@ -207,12 +207,15 @@ export async function getChatMessages(characterId: string): Promise<ChatMessage[
   return request<ChatMessage[]>(`/chat/characters/${characterId}/messages`);
 }
 
-export async function sendChatMessage(characterId: string, textContent: string): Promise<SendMessageResponse> {
+export async function sendChatMessage(characterId: string, textContent: string, apiKey?: string): Promise<SendMessageResponse> {
+  const activeKey = apiKey || (typeof localStorage !== 'undefined' ? localStorage.getItem('gemini_api_key') : null);
   return request<SendMessageResponse>(`/chat/characters/${characterId}/messages`, {
     method: 'POST',
     body: JSON.stringify({
       textContent,
+      text: textContent,
       language: 'en',
+      apiKey: activeKey || undefined,
     }),
   });
 }

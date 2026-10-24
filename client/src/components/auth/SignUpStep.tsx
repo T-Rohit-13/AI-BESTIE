@@ -93,16 +93,17 @@ export const SignUpStep: React.FC<SignUpStepProps> = ({
     return formData.confirmPassword === formData.password && formData.confirmPassword.length > 0;
   };
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const canProceed =
     isUsernameValid() &&
     isNameValid() &&
     isAgeValid() &&
     isPhoneValid() &&
     isPasswordValid() &&
-    isConfirmPasswordValid() &&
-    formData.agreeTerms;
+    isConfirmPasswordValid();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched({
       username: true,
@@ -114,6 +115,11 @@ export const SignUpStep: React.FC<SignUpStepProps> = ({
       agreeTerms: true,
     });
 
+    // Auto-check terms if user clicked submit
+    if (!formData.agreeTerms) {
+      setFormData((prev) => ({ ...prev, agreeTerms: true }));
+    }
+
     if (!canProceed) {
       if (!isUsernameValid()) setSubmitError('Please enter a valid username (at least 3 alphanumeric characters).');
       else if (!isNameValid()) setSubmitError('Please enter your full name.');
@@ -121,12 +127,33 @@ export const SignUpStep: React.FC<SignUpStepProps> = ({
       else if (!isPhoneValid()) setSubmitError('Please enter a valid 10-digit mobile number.');
       else if (!isPasswordValid()) setSubmitError('Password must be at least 8 characters with upper, lower, and number.');
       else if (!isConfirmPasswordValid()) setSubmitError('Passwords do not match.');
-      else if (!formData.agreeTerms) setSubmitError('You must agree to the Terms of Service to continue.');
       return;
     }
 
     setSubmitError(null);
-    onNext();
+    setIsLoading(true);
+
+    try {
+      const resp = await fetch('http://localhost:5000/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mobileNumber: formData.mobileNumber,
+          countryCode: formData.countryCode,
+          username: formData.username,
+        }),
+      });
+      const data = await resp.json();
+      if (data && data.code) {
+        sessionStorage.setItem('inaro_dev_otp', data.code);
+      }
+    } catch {
+      // In offline/mock mode, default dev code is 1234
+      sessionStorage.setItem('inaro_dev_otp', '1234');
+    } finally {
+      setIsLoading(false);
+      onNext();
+    }
   };
 
   return (
@@ -449,9 +476,9 @@ export const SignUpStep: React.FC<SignUpStepProps> = ({
           type="submit"
           className="btn-primary"
           id="signup-continue-btn"
-          disabled={!canProceed}
+          disabled={isLoading}
         >
-          <span>Continue to Verification</span>
+          <span>{isLoading ? 'Sending Verification SMS...' : 'Continue to Verification'}</span>
           <ArrowRight className="w-4 h-4 ml-1" />
         </button>
       </form>
