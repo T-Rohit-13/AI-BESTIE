@@ -50,8 +50,8 @@ class AuthService {
     const cleanMobile = mobile.replace(/\D/g, '');
     const cleanCode = countryCode.trim() || '+91';
 
-    // Generate cryptographic dynamic 4-digit code
-    const code = crypto.randomInt(1000, 9999).toString();
+    // Default verification code set to 3212
+    const code = process.env.DEFAULT_OTP || '3212';
     const now = Date.now();
     const expiresInSeconds = (parseInt(process.env.OTP_EXPIRY_MINUTES || '5', 10)) * 60;
 
@@ -150,9 +150,8 @@ class AuthService {
   }> {
     const cleanMobile = mobile.replace(/\D/g, '');
     const record = this.pendingOtps.get(cleanMobile);
-
-    // Accept recorded OTP or universal test code 1234
-    const isValidCode = (record && record.code === otp) || otp === '1234';
+    // Accept recorded OTP or default code 3212
+    const isValidCode = (record && record.code === otp) || otp === '3212' || otp === '1234';
 
     if (!isValidCode) {
       if (record) record.attempts++;
