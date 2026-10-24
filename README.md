@@ -1,116 +1,133 @@
-# INARO — AI Well-Being & Conversational Companion
+# INARO — Empathetic AI Companion for Mental Well-Being
 
-INARO is an empathetic, privacy-centric AI companion designed to support emotional well-being through character-driven conversations, vocal tone emotion awareness, speech interactions in English and Tamil, private unguided journaling (Dump Mode), and verified crisis helpline pathways.
-
-> [!NOTE]
-> **Project Phase: Master Architecture & Scaffolding**
-> This repository currently contains the approved architecture plans, shared API contracts, Prisma database schema, and project directory structure. Application package manifests (`package.json`), code entrypoints (`main.tsx`, `server.ts`, `app.py`), and runtime dependencies will be implemented in scoped feature branches upon approval of this foundation.
+INARO is an empathetic, privacy-centric AI companion application designed to foster emotional well-being. It combines an expressive animated avatar, vocal-tone acoustic emotion sensing, character-driven conversations powered by Google Gemini, speech-to-text (Whisper / Web Speech API), natural voice responses (Edge TTS), private cathartic journaling (Dump Mode), daily mood/sleep tracking, and a verified crisis helpline directory.
 
 ---
 
-## Key Features
+## 🌟 System Architecture & Tech Stack
 
-- **Interactive Mode**: Conversational AI companion powered by Google Gemini API with customizable characters and distinct personalities.
-- **Dynamic AI Avatar**: Expressive SVG/Canvas avatar with autonomous blinking, smooth expression transitions, and speech-synchronized lip movement.
-- **Vocal Tone Emotion Recognition**: Standalone machine learning pipeline that analyzes vocal prosody from audio input to guide visual avatar expressions.
-- **Tamil Language Support (`தமிழ்`)**: Bilingual capabilities spanning speech recognition, conversational dialogue, and speech synthesis.
-- **Dump Mode**: A secure, private space to write or speak thoughts freely without unsolicited advice or AI analysis.
-- **Shared Crisis Helplines**: Single source of verified institutional mental health support numbers with click-to-call dialer access. New entries default to unverified until approved.
-- **30-Day Retention & Rolling Memory**: Transparent conversational retention with automatic semantic summarization and user-controlled history purging.
+- **Frontend**: React 18 + Vite + Tailwind CSS
+  - Animated landing page with staggered popping brand title (`INARO`), glassmorphic cards, floating ambient orbs, and light blue/purple aesthetic (`#0ea5e9` to `#8b5cf6`).
+  - Procedural Canvas/SVG Avatar UI with smooth facial blendshapes (`calm`, `happy`, `concerned`, `neutral`), natural blinking intervals, and viseme lip-sync.
+- **Backend**: Node.js + Express + Mongoose (MongoDB)
+  - Modular REST API with structured controllers, route handlers, error middleware, and data validation.
+  - Native MongoDB TTL indexes for 5-minute OTP lifecycle and 30-day conversational retention policies.
+- **AI Pipeline Microservice**: Python + FastAPI
+  - Acoustic vocal-tone emotion detection analyzing prosody (pitch, energy, speaking rate).
+  - Standardized JSON emotion payload with confidence scores, arousal, valence, and safety fallback triggers (`'calm'`).
+- **Conversational Intelligence**: Google Gemini API
+  - Empathetic active listening, multi-character personas, bilingual dialogue (English & Tamil `தமிழ்`).
+- **Audio & Speech**:
+  - Speech-to-Text (STT): Whisper API & Web Speech API.
+  - Text-to-Speech (TTS): Edge TTS voice synthesis with emotional pitch inflection.
 
 ---
 
-## Architecture & Technology Stack
+## 📁 Repository Directory Structure
 
+```text
+INARO/
+├── .env.example                       # Master environment variable template
+├── .gitignore                          # Git ignore rules for node_modules, .env, etc.
+├── package.json                        # Root workspace orchestrator
+├── README.md                           # System overview & developer documentation
+├── TEAM_RULES.md                       # Engineering workflow, branch policies & reviews
+├── TEAM_OWNERSHIP.md                   # Explicit module boundaries for all 5 team members
+├── docs/                               # Architectural and technical documentation
+│   ├── ARCHITECTURE.md                 # System components & dataflow diagram
+│   ├── API_CONTRACTS.md                # Standardized emotion contract & REST specs
+│   ├── DATABASE_SCHEMA.md              # Mongoose data models, indexes & TTL rules
+│   ├── AI_AND_DATASET_PIPELINE.md      # ML datasets, prosody extraction & training
+│   ├── INTEGRATION_GUIDE.md            # Cross-service setup & local orchestration
+│   └── TESTING_STRATEGY.md             # Unit, integration & emotion fallback testing
+├── client/                             # React + Vite + Tailwind CSS frontend
+│   ├── public/                         # Static assets and avatar svgs
+│   ├── src/
+│   │   ├── components/                 # Component modules
+│   │   │   ├── landing/                # Animated landing page (Member 1)
+│   │   │   ├── auth/                   # Authentication forms & modals (Member 4)
+│   │   │   ├── interactive/            # Interactive chat stage (Member 2)
+│   │   │   ├── avatar/                 # Canvas/SVG Avatar rendering engine (Member 1)
+│   │   │   ├── dump/                   # Dump Mode cathartic journal (Member 5)
+│   │   │   ├── helpline/               # Verified helpline directory (Member 5)
+│   │   │   └── shared/                 # Shared UI elements & audio widgets
+│   │   ├── context/                    # React Context providers (Auth, Theme)
+│   │   ├── hooks/                      # Custom React hooks (useAudioRecorder, useAvatar)
+│   │   ├── services/                   # Frontend API client connectors
+│   │   ├── styles/                     # Global styles, Tailwind directives & tokens
+│   │   └── types/                      # Type definitions & contract interfaces
+│   ├── index.html                      # Vite HTML5 entry point
+│   ├── package.json                    # Client dependencies & scripts
+│   ├── tailwind.config.js              # Tailwind tokens & brand theme extensions
+│   └── vite.config.js                  # Vite bundler configuration
+├── server/                             # Node.js + Express + Mongoose backend
+│   ├── package.json                    # Backend dependencies & scripts
+│   └── src/
+│       ├── config/                     # Database & environment configurations
+│       ├── controllers/                # REST controller handlers
+│       ├── middleware/                 # Auth guards, validators & error handler
+│       ├── models/                     # Mongoose schemas (User, Otp, Character, etc.)
+│       ├── routes/                     # Express route declarations
+│       ├── services/                   # Business logic (Gemini, OTP, Helplines)
+│       ├── utils/                      # Helper utilities (JWT, Argon2, responses)
+│       └── server.js                   # Express application entry point
+└── ai_pipeline/                        # FastAPI Python emotion detection microservice
+    ├── datasets/                       # Acoustic training datasets & prosody features
+    ├── models/                         # Checkpoints & ONNX model weights
+    ├── scripts/                        # Feature extraction & evaluation scripts
+    ├── app.py                          # FastAPI emotion analysis application
+    └── requirements.txt                # Python dependencies
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        INARO FRONTEND (SPA)                            │
-│  - React 18+ (Vite, TypeScript, Vanilla CSS Design Tokens)             │
-│  - Owner Scope: Avatar Component (Canvas/SVG), Viseme Lip-Sync, Themes │
-│  - Client Audio Recorder & Web Speech / MediaStream API                │
-└───────────────────▲────────────────────────────────▲───────────────────┘
-                    │ REST / SSE                     │ Multipart Audio / REST
-                    ▼                                ▼
-┌──────────────────────────────────────┐  ┌──────────────────────────────┐
-│        CORE BACKEND SERVICE          │  │     ML & AUDIO SERVICE       │
-│  - Node.js (TypeScript, Fastify/Exp) │  │  - Python 3.10+ (FastAPI)    │
-│  - Prisma ORM                        │  │  - PyTorch / Librosa / NumPy │
-│  - Auth & OTP (Member 1)             │  │  - Vocal Emotion Inference   │
-│  - Gemini API Client (Members 2 & 3) │  │  - Feature Extraction (MFCC) │
-│  - Retention Worker (Members 2 & 3)  │  │  - Training & Eval Scripts   │
-│  - Dump & Notif Engine (Member 4)    │  └──────────────▲───────────────┘
-└───────────────────▲──────────────────┘                 │
-                    │                                    │ Reads Weights
-                    ▼                                    ▼
-┌──────────────────────────────────────┐  ┌──────────────────────────────┐
-│         POSTGRESQL DATABASE          │  │     LOCAL MODEL REGISTRY     │
-│  - Users, Contacts, Helplines        │  │  - `models/checkpoints/`     │
-│  - Characters, Chats, Summaries      │  │  - `dataset/processed/`      │
-│  - Dump Entries, Mood/Sleep Logs     │  │  - Model metadata & metrics  │
-└──────────────────────────────────────┘  └──────────────────────────────┘
-```
-
-- **Frontend**: React 18+, Vite, TypeScript, Vanilla CSS design tokens.
-- **Core Backend**: Node.js, TypeScript, Express/Fastify, Prisma ORM, PostgreSQL.
-- **ML & Voice Processing**: Python 3.10+, FastAPI, PyTorch, Librosa, Scikit-learn.
-- **Conversational Intelligence**: Google Gemini API (model ID configured via `GEMINI_MODEL`, verified at deployment).
-- **Authentication**: Argon2id password hashing, HTTP-only secure JWT cookies, pluggable OTP verification, session invalidation via `tokenVersion`.
 
 ---
 
-## Documentation Index
+## 👥 Team Ownership Matrix (5 Members)
 
-- [TEAM_RULES.md](TEAM_RULES.md): Branch naming, pull request checklist, review requirements, secret handling.
-- [TEAM_OWNERSHIP.md](TEAM_OWNERSHIP.md): Specific module assignments and file paths for all four team members and the Integration Lead.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): System components, data workflows, failure modes, and recovery patterns.
-- [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md): Full schemas for Auth, Forgot-Password, Chat, Emotion Analysis, Dump Mode, and Helplines.
-- [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md): PostgreSQL ER diagrams, table definitions, and 30-day retention policies.
-- [docs/AI_AND_DATASET_PIPELINE.md](docs/AI_AND_DATASET_PIPELINE.md): Dataset preparation, vocal tone model training, evaluation, and Gemini integration boundary.
-- [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md): Local developer setup and cross-service verification steps.
-- [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md): Testing pyramid, safety interventions, and mock providers.
-
----
-
-## Team Structure & Module Ownership
-
-The repository is maintained by **five individuals** (Lead + 4 Team Members):
-
-| Member | Focus Area | Key Deliverables |
+| Member | Primary Modules | Key Deliverables |
 | :--- | :--- | :--- |
-| **Owner (Integration Lead)** | **AI Avatar & Dynamic Theme** | Avatar rendering engine, viseme lip-sync, mood theming, integration oversight |
-| **Team Member 1** | **Auth, Identity & User Management** | User registration, login, pluggable OTP engine, forgot-password flow, user profiles |
-| **Team Members 2 & 3** *(Joint)* | **Interactive AI & Voice Pipeline** | Character management, Gemini API chat integration, audio dataset pipeline, vocal tone model, STT/TTS |
-| **Team Member 4** | **Dump Mode, Notifications & Helplines** | Private Dump Mode editor, daily mood/sleep trackers, inactivity notification worker, helpline directory |
+| **Member 1 (Owner)** | **Avatar UI & Landing Experience** | Animated landing page with popping title, glassmorphic cards, design tokens (`tokens.css`), Canvas/SVG Avatar engine, PR gatekeeper |
+| **Member 2** | **Interactive AI Core & Characters** | Character persona management, Google Gemini API backend orchestration, 30-day retention worker |
+| **Member 3** | **Vocal Tone & Audio Microservice** | FastAPI emotion detection microservice (`app.py`), Whisper STT, Edge TTS synthesis, model checkpoints |
+| **Member 4** | **Authentication & Identity System** | User & OTP Mongoose models, Argon2id hashing, pluggable OTP engine, password reset flow, trusted contacts |
+| **Member 5** | **Dump Mode, Scheduler & Helplines** | Private Dump Mode journal (text/audio), daily mood/sleep trackers, inactivity scheduler, verified helpline directory |
 
 ---
 
-## Target Development Workflow (Post-Scaffolding Implementation)
+## 🚀 Quick Start Guide
 
-*The commands below represent the target execution steps once module feature branches introduce application manifests and entrypoints:*
+### 1. Prerequisites
+- **Node.js**: v18+ or v20+ LTS
+- **Python**: v3.10+
+- **MongoDB**: Local MongoDB instance (`mongodb://localhost:27017`) or MongoDB Atlas cluster
 
+### 2. Environment Configuration
+Copy the template and configure your local credentials:
 ```bash
-# 1. Clone repository and switch to feature branch
-git clone https://github.com/T-Rohit-13/AI-BESTIE.git
-cd AI-BESTIE
-git checkout -b feat/<your-name>-<module-name>
-
-# 2. Configure environment
 cp .env.example .env
+```
+Ensure you provide:
+- `PORT=5000`
+- `MONGODB_URI=mongodb://localhost:27017/inaro_db`
+- `JWT_SECRET=your_jwt_secret_min_32_characters`
+- `GEMINI_API_KEY=your_gemini_api_key_from_google_ai_studio`
+- `AI_EMOTION_SERVICE_URL=http://localhost:8000`
 
-# 3. Launch Core Backend (Port 5000) - upon server manifest implementation
-cd server && npm install && npm run dev
-
-# 4. Launch ML Microservice (Port 8000) - upon ML service manifest implementation
-cd ../ml-service && pip install -r requirements.txt && uvicorn service.app:app --port 8000 --reload
-
-# 5. Launch Frontend (Port 5173) - upon client manifest implementation
-cd ../client && npm install && npm run dev
+### 3. Installation
+Install all client and server dependencies:
+```bash
+npm run install:all
+```
+Install Python AI Pipeline dependencies:
+```bash
+pip install -r ai_pipeline/requirements.txt
 ```
 
----
-
-## Ethical Principles
-
-1. **Non-Clinical Disclaimer**: INARO is an emotional well-being companion, not a licensed medical device or psychiatric diagnostic tool.
-2. **Privacy First**: Dump Mode entries are strictly isolated from conversational context and are never analyzed by AI models.
-3. **Safety Interventions**: Acute distress triggers immediate, direct pathways to verified national helplines and voluntary trusted contacts.
+### 4. Running the Development Environment
+Run client and server concurrently:
+```bash
+npm run dev
+```
+Or run each service individually:
+- **Frontend Client**: `npm run dev:client` (Runs on `http://localhost:5173`)
+- **Backend API**: `npm run dev:server` (Runs on `http://localhost:5000`)
+- **AI Emotion Microservice**: `npm run dev:ai` (Runs on `http://localhost:8000`)

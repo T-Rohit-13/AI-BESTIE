@@ -1,6 +1,6 @@
 # INARO — Master API Contracts & Specifications
 
-This document defines formal request and response schemas, validation rules, error formats, and module ownership for all REST and WebSocket interfaces across the INARO application.
+This document defines the formal request and response schemas, validation rules, error formats, and module ownership for all REST, WebSocket, and microservice interfaces across the INARO application.
 
 ---
 
@@ -16,347 +16,240 @@ All API responses return JSON and follow standard HTTP status codes.
     "code": "VALIDATION_FAILED",
     "message": "The personal mobile number must be a valid 10-digit number.",
     "details": [
-      { "field": "mobileNumber", "issue": "Invalid format" }
+      { "field": "personalMobile", "issue": "Invalid format" }
     ]
   },
-  "timestamp": "2026-10-23T22:45:00Z"
+  "timestamp": "2026-10-24T05:30:00.000Z"
 }
 ```
 
 ---
 
-## 2. Authentication & User Management (Owner: Member 1)
+## 2. Standardized Emotion Analysis Contract (Member 3 ➔ Member 1 Avatar Controller)
 
-### 2.1 Register User
+This contract defines the standardized JSON payload produced by the **FastAPI Vocal Emotion Microservice (`ai_pipeline/app.py` - Member 3)** and consumed by the **Frontend Avatar Controller & Theme Engine (`client/src/components/avatar/` - Member 1)** as well as the **Gemini Conversation Engine (Member 2)**.
+
+### 2.1 Analyze Acoustic Emotion Endpoint
+- **Method / Endpoint**: `POST /api/v1/analyze-emotion` (or `/api/v1/analyze-audio-file`)
+- **Protocol**: HTTP/REST or WebSocket streaming
+- **Source**: AI Pipeline Microservice (Port 8000)
+- **Consumer**: Express Backend (Port 5000) / React Avatar Controller (Port 5173)
+
+#### Standardized Emotion Analysis Response Payload
+```json
+{
+  "success": true,
+  "primary_emotion": "calm",
+  "confidence_scores": {
+    "calm": 0.852,
+    "happy": 0.081,
+    "sad": 0.034,
+    "anxious": 0.018,
+    "angry": 0.008,
+    "neutral": 0.007
+  },
+  "arousal": 0.28,
+  "valence": 0.72,
+  "fallback_triggered": false,
+  "fallback_reason": null,
+  "avatar_triggers": {
+    "expression": "calm",
+    "viseme_intensity": 0.65,
+    "eye_contact_rate": 0.85
+  },
+  "latency_ms": 38.5,
+  "timestamp": "2026-10-24T05:30:15.120Z"
+}
+```
+
+#### Field Specifications & Types
+
+| Field | Type | Description | Range / Values |
+| :--- | :--- | :--- | :--- |
+| `success` | `boolean` | Indicates whether the inference succeeded. | `true`, `false` |
+| `primary_emotion` | `string` | The detected dominant emotion, or `'calm'` if fallback triggered. | `'calm'`, `'happy'`, `'sad'`, `'anxious'`, `'angry'`, `'neutral'` |
+| `confidence_scores` | `object` | Normalized softmax probabilities across all 6 emotional states (sum = 1.0). | Each key `0.000` to `1.000` |
+| `arousal` | `float` | Acoustic energy / physiological activation indicator. | `0.0` (lethargic) to `1.0` (hyper-aroused) |
+| `valence` | `float` | Positivity vs. negativity valence index. | `0.0` (highly distressed) to `1.0` (pleasurable) |
+| `fallback_triggered` | `boolean` | Set to `true` when confidence is below threshold or input is noisy/corrupt. | `true`, `false` |
+| `fallback_reason` | `string | null` | Human-readable explanation when fallback is activated. | e.g. `"Top confidence (0.42) below threshold (0.60)"` |
+| `avatar_triggers.expression` | `string` | Target facial blendshape / SVG expression key for Avatar UI. | `'calm'`, `'happy'`, `'concerned'`, `'neutral'` |
+| `avatar_triggers.viseme_intensity`| `float` | Lip-sync mouth openness multiplier. | `0.0` to `1.0` |
+| `avatar_triggers.eye_contact_rate`| `float` | Autonomous pupil tracking and blink dampening factor. | `0.0` to `1.0` |
+| `latency_ms` | `float` | End-to-end inference processing time in milliseconds. | Typically `< 100ms` |
+| `timestamp` | `string` | ISO 8601 UTC timestamp of the inference event. | e.g. `"2026-10-24T05:30:15.120Z"` |
+
+### 2.2 Fallback Triggers & Safety Rules ('calm')
+
+1. **Low Confidence Fallback**:
+   - If `max(confidence_scores.values()) < CONFIDENCE_THRESHOLD` (default: `0.60`):
+     - The service sets `fallback_triggered: true`.
+     - `primary_emotion` defaults unconditionally to `'calm'`.
+     - `avatar_triggers.expression` is forced to `'calm'` to maintain a reassuring, stabilizing avatar demeanor.
+2. **Degraded Audio / Packet Loss**:
+   - If audio buffer is `< 1.0 KB`, contains clipping, or throws an unhandled decoding exception:
+     - The service returns a 200 OK with `fallback_triggered: true` and baseline `'calm'` distribution:
+       ```json
+       {
+         "primary_emotion": "calm",
+         "confidence_scores": { "calm": 1.0, "happy": 0.0, "sad": 0.0, "anxious": 0.0, "angry": 0.0, "neutral": 0.0 },
+         "fallback_triggered": true,
+         "fallback_reason": "Audio stream below minimum length threshold. Reverted to safety baseline."
+       }
+       ```
+3. **Frontend Avatar Controller Reaction**:
+   - The Avatar UI smoothly interpolates current facial coordinates toward the `'calm'` resting pose over 350ms, preventing jarring visual glitches.
+
+---
+
+## 3. Authentication & User Management (Owner: Member 4)
+
+### 3.1 Register User
 - **Method / Endpoint**: `POST /api/v1/auth/register`
-- **Purpose**: Creates an inactive account and triggers mobile OTP.
 - **Request Body**:
 ```json
 {
   "username": "rohit_t",
-  "fullName": "Rohit T",
+  "name": "Rohit T",
   "age": 22,
-  "mobileNumber": "9876543210",
+  "personalMobile": "9876543210",
   "password": "SecurePassword123!",
-  "trustedContact": {
-    "name": "Sarah",
-    "mobileNumber": "9876543211",
-    "consentGiven": true
+  "trustedPersonMobile": "9876543211",
+  "location": {
+    "state": "Tamil Nadu",
+    "country": "India"
   }
 }
 ```
-- **Validation Rules**:
-  - `username`: Alphanumeric, 3-20 characters.
-  - `age`: Integer between 13 and 120.
-  - `mobileNumber`: 10-digit string.
-  - `trustedContact`: Optional. If omitted, frontend routes user to the verified counselling helpline pathway.
-- **Security & Authorization Rules**:
-  - The password is validated on the backend and hashed using Argon2id prior to database insertion.
-  - OTP code is generated as a secure 6-digit numeric value, hashed (SHA-256) before storage in `OtpVerification`, and assigned a strict 5-minute TTL (`expiresAt`).
-  - Maximum 3 verification attempts permitted before the code is locked and invalidated.
 - **Response (`201 Created`)**:
 ```json
 {
   "success": true,
+  "message": "User registered successfully. Verification OTP dispatched.",
   "data": {
-    "userId": "usr_101",
-    "mobileNumber": "9876543210",
-    "otpSent": true,
+    "userId": "6719dc6a9e144a1b8c2d43e1",
+    "personalMobile": "9876543210",
+    "isMobileVerified": false,
     "otpExpiresInSeconds": 300
   }
 }
 ```
 
-### 2.2 Verify Mobile OTP
+### 3.2 Verify Registration OTP
 - **Method / Endpoint**: `POST /api/v1/auth/verify-otp`
 - **Request Body**:
 ```json
 {
-  "mobileNumber": "9876543210",
-  "otpCode": "482910",
-  "purpose": "REGISTER"
+  "mobile": "9876543210",
+  "otp": "482910",
+  "purpose": "REGISTRATION"
 }
 ```
-- **Security & Lifecycle Rules**:
-  - Backend verifies matching hash, checks `expiresAt > NOW()`, `attempts < 3`, and `isConsumed == false`.
-  - Increments `attempts` counter on invalid match; locks code upon 3 failed attempts.
-  - Upon successful match, marks `isConsumed = true` (single-use enforcement) and activates user account.
-  - Issues an HTTP-only secure JWT session cookie. The client frontend never decides whether an OTP is valid.
-- **Response (`200 OK`)**: Sets HTTP-only secure JWT cookie.
-
-### 2.3 User Login
-- **Method / Endpoint**: `POST /api/v1/auth/login`
-- **Request Body**:
-```json
-{
-  "username": "rohit_t",
-  "password": "SecurePassword123!"
-}
-```
-- **Security & Authorization Rules**:
-  - Backend retrieves user by username, verifies password using Argon2id verify, and checks `isMobileVerified == true`.
-  - Issues signed JWT access and refresh tokens embedding current `tokenVersion`.
-- **Response (`200 OK`)**: Returns user profile and sets access token cookie.
-
-### 2.4 Forgot Password — Request OTP (Anti-Enumeration)
-- **Method / Endpoint**: `POST /api/v1/auth/forgot-password`
-- **Purpose**: Initiates password reset for a registered username or mobile number.
-- **Request Body**:
-```json
-{
-  "identifier": "rohit_t"
-}
-```
-- **Security Rule (Anti-Account Enumeration)**:
-  - The server **always returns HTTP 200 OK** with an identical generic message, whether the account exists or not. This prevents attackers from enumerating registered usernames or numbers.
-  - If the account exists, the server generates a 6-digit OTP, stores its SHA-256 hash with a 5-minute TTL, and dispatches the code via the configured OTP provider.
 - **Response (`200 OK`)**:
 ```json
 {
   "success": true,
-  "message": "If an account matching that identifier exists, a verification code has been sent to the registered mobile number."
-}
-```
-
-### 2.5 Forgot Password — Verify Reset OTP
-- **Method / Endpoint**: `POST /api/v1/auth/verify-reset-otp`
-- **Request Body**:
-```json
-{
-  "identifier": "rohit_t",
-  "otpCode": "482910"
-}
-```
-- **Security & Authorization Rules**:
-  - Validates `otpCode` against stored hash, enforcing 5-minute expiry, max 3 attempts, and single-use (`isConsumed == false`).
-  - Marks OTP record `isConsumed = true`.
-  - Generates a cryptographically secure random reset token (e.g. 32 bytes hex), stores its SHA-256 hash in `OtpVerification.resetTokenHash` with a strict 10-minute TTL (`resetTokenExpiresAt`), and returns the unhashed reset token to the client.
-- **Response (`200 OK`)**:
-```json
-{
-  "success": true,
+  "message": "Mobile number verified successfully.",
   "data": {
-    "resetToken": "rst_982bfe8301ac234e8f192837465abcde",
-    "expiresInSeconds": 600
-  }
-}
-```
-
-### 2.6 Forgot Password — Complete Password Reset
-- **Method / Endpoint**: `POST /api/v1/auth/reset-password`
-- **Request Body**:
-```json
-{
-  "resetToken": "rst_982bfe8301ac234e8f192837465abcde",
-  "newPassword": "NewSecurePassword123!"
-}
-```
-- **Security & Session Invalidation Rules**:
-  - Backend hashes incoming `resetToken` and looks up unconsumed record where `resetTokenExpiresAt > NOW()`.
-  - Validates new password complexity (minimum 8 chars, mixed case, number, symbol).
-  - Hashes new password with Argon2id and updates `User.passwordHash`.
-  - Increments `User.tokenVersion` to **immediately invalidate all active JWT sessions and refresh tokens** across all user devices.
-  - Deletes or consumes the reset token so it cannot be reused.
-- **Response (`200 OK`)**:
-```json
-{
-  "success": true,
-  "message": "Password has been successfully updated. All active sessions have been invalidated. Please log in with your new password."
-}
-```
-
----
-
-## 3. Stable Emotion Analysis Contract (Owner: Members 2 & 3 Joint Scope $\to$ Consumed by Owner Avatar)
-
-Produced by the Vocal Tone Inference Service and conversational sentiment analysis, consumed directly by the AI Avatar rendering engine.
-
-### 3.1 Infer Emotion from Audio
-- **Method / Endpoint**: `POST /api/v1/ml/infer-vocal-emotion`
-- **Content-Type**: `multipart/form-data` (Binary audio WAV/WebM)
-- **Response (`200 OK`)**:
-```json
-{
-  "interaction_id": "int_98a7c2f1",
-  "timestamp": "2026-10-23T22:45:00Z",
-  "inferred_emotion": {
-    "label": "concerned",
-    "confidence": 0.88,
-    "intensity": 0.75,
-    "source": "vocal_tone_model",
-    "model_version": "vocal-aer-cnn-v1.2.0"
-  },
-  "conversational_sentiment": {
-    "label": "sad",
-    "score": -0.65
-  },
-  "avatar_visual_hints": {
-    "recommended_expression": "concerned",
-    "audio_duration_ms": 3400
-  },
-  "safety_assessment": {
-    "requires_intervention": false,
-    "severity_level": "GREEN",
-    "matched_triggers": []
-  }
-}
-```
-- **Safety Severity Values**:
-  - `severity_level` must strictly be one of uppercase: `"GREEN" | "AMBER" | "RED"`.
-- **Avatar Facial Expression Mapping**:
-  - `recommended_expression` must be one of: `["happy", "sad", "calm", "concerned", "surprised", "neutral"]`.
-  - **Graceful Fallback**: If confidence < 0.60, model unavailable, or request times out (>500ms), the frontend avatar defaults smoothly to `"calm"`.
-
----
-
-## 4. Interactive Mode & Character Management (Owner: Members 2 & 3 Joint Scope)
-
-### 4.1 Create Character
-- **Method / Endpoint**: `POST /api/v1/characters`
-- **Request Body**:
-```json
-{
-  "name": "Maya",
-  "avatarStyle": "zen",
-  "systemPrompt": "You are Maya, a gentle, reflective listener who provides calm perspectives and never judges.",
-  "toneDescription": "Calm, thoughtful, supportive"
-}
-```
-
-### 4.2 Send Message & Stream Response
-- **Method / Endpoint**: `POST /api/v1/chat/characters/:characterId/messages`
-- **Request Body**:
-```json
-{
-  "conversationId": "conv_401",
-  "textContent": "I've been feeling overwhelmed with work recently.",
-  "language": "en"
-}
-```
-- **Response (`200 OK` or Server-Sent Events stream)**:
-```json
-{
-  "success": true,
-  "data": {
-    "userMessageId": "msg_001",
-    "aiResponse": {
-      "messageId": "msg_002",
-      "textContent": "It sounds like you're carrying a heavy load right now. Do you want to unpack what feels most pressing?",
-      "audioUrl": "/api/v1/voice/synthesize/msg_002.wav",
-      "emotionRecommendation": "concerned",
-      "safetyStatus": "GREEN"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "6719dc6a9e144a1b8c2d43e1",
+      "username": "rohit_t",
+      "name": "Rohit T",
+      "isMobileVerified": true
     }
   }
 }
 ```
 
-### 4.3 Clear Conversation History
-- **Method / Endpoint**: `DELETE /api/v1/chat/conversations/:conversationId`
-- **Purpose**: Immediately purges full message history and summaries for that character upon user request under database transaction locks.
-
----
-
-## 5. Seven-Day Rolling Safety Evaluation Contract (Owner: Members 2 & 3 Joint Scope)
-
-### 5.1 Get Rolling Safety Assessment
-- **Method / Endpoint**: `GET /api/v1/safety/rolling-seven-day`
-- **Evaluation Rules & Missing Data Handling**:
-  - The evaluator inspects records in `DailyMoodLog` for the preceding 7 calendar days (`[CURRENT_DATE - 6 days, CURRENT_DATE]`).
-  - **Missing Daily Records**: When a user misses logging on a date, **no row exists in the database**.
-  - **Missing days are strictly ignored**: They are never imputed as negative mood, never counted toward the flagged numerator, and never treated as evidence of depression.
-  - Tiers:
-    - **Fewer than 4 flagged days (0–3 days)**: `"STANDARD_SUPPORT"`.
-    - **Exactly 4 flagged days**: `"MODERATE_SUPPORT"`.
-    - **More than 4 flagged days (5–7 days)**: `"ELEVATED_SUPPORT"`.
+### 3.3 Forgot Password / Request Reset OTP
+- **Method / Endpoint**: `POST /api/v1/auth/forgot-password`
+- **Request Body**:
+```json
+{
+  "identifier": "9876543210"
+}
+```
 - **Response (`200 OK`)**:
 ```json
 {
   "success": true,
-  "data": {
-    "window_start": "2026-10-17",
-    "window_end": "2026-10-23",
-    "total_days_evaluated": 7,
-    "days_with_logs": 5,
-    "missing_log_days": 2,
-    "flagged_days_count": 4,
-    "evaluation_tier": "MODERATE_SUPPORT",
-    "action_recommended": "DISPLAY_SUPPORTIVE_REFLECTION",
-    "suggested_actions": [
-      "PROMPT_DUMP_MODE",
-      "OFFER_TRUSTED_CONTACT_OUTREACH",
-      "SHOW_HELPLINE_OVERLAY"
-    ],
-    "disclaimer": "This reflection evaluates recent recorded check-ins and is not a medical or psychiatric diagnosis."
-  }
+  "message": "If the account exists, an OTP has been dispatched to the registered mobile."
 }
 ```
 
 ---
 
-## 6. Dump Mode & Daily Trackers (Owner: Member 4)
+## 4. Interactive Mode & Character Personas (Owner: Member 2)
 
-### 6.1 Create Dump Entry
+### 4.1 Send Dialogue Message
+- **Method / Endpoint**: `POST /api/v1/chat/message`
+- **Request Body**:
+```json
+{
+  "characterId": "6719dc6a9e144a1b8c2d43f0",
+  "text": "I feel overwhelmed with work lately.",
+  "detectedEmotion": "anxious",
+  "confidence": 0.78
+}
+```
+- **Response (`200 OK`)**:
+```json
+{
+  "success": true,
+  "reply": "It's completely okay to feel overwhelmed. Let's take a slow breath together. Would you like to break down what's feeling heavy right now?",
+  "replyAudioUrl": "/api/v1/tts/stream?id=reply_49204.mp3",
+  "avatarCue": "concerned",
+  "timestamp": "2026-10-24T05:31:00.000Z"
+}
+```
+
+---
+
+## 5. Dump Mode, Trackers & Helplines (Owner: Member 5)
+
+### 5.1 Create Dump Entry
 - **Method / Endpoint**: `POST /api/v1/dump/entries`
 - **Request Body**:
 ```json
 {
-  "title": "Thoughts before sleep",
-  "content": "Just needed to get this out of my head...",
-  "moodTag": "exhausted"
+  "entryType": "text",
+  "content": "Just pouring out my frustration so my head feels lighter.",
+  "sentimentTag": "reflective"
 }
 ```
-- **Guaranteed Behavior**: Stored strictly as private text. **No AI analysis, critique, or automated response is generated.**
-
-### 6.2 Log Daily Mood & Sleep
-- **Method / Endpoint**: `POST /api/v1/tracker/daily-log`
-- **Request Body**:
+- **Response (`201 Created`)**:
 ```json
 {
-  "date": "2026-10-23",
-  "moodRating": 4,
-  "sleepDurationHours": 7.5
+  "success": true,
+  "entryId": "6719dc6a9e144a1b8c2d4401",
+  "createdAt": "2026-10-24T05:32:00.000Z"
 }
 ```
-- **Missing Data Rule**: Days without mood/sleep logs have **no row created**. The system does not backfill missing days or interpret gaps as mental health decline.
 
----
-
-## 7. Shared Helpline Directory (Owner: Member 4 / All)
-
-### 7.1 Get Verified Helplines
-- **Method / Endpoint**: `GET /api/v1/helplines?category=GOVERNMENT&language=Tamil`
-- **Verification Rule**: New helpline entries are `isVerified: false` by default. Only numbers with verified documentation approved by administrators can be marked `isVerified: true`.
+### 5.2 Query Verified Helplines
+- **Method / Endpoint**: `GET /api/v1/helplines?region=Tamil Nadu`
 - **Response (`200 OK`)**:
 ```json
 {
   "success": true,
   "data": [
     {
-      "id": "help_01",
-      "category": "GOVERNMENT",
-      "serviceName": "Tele-MANAS (Mental Health Helpline)",
-      "phoneNumber": "14416",
-      "description": "24/7 toll-free mental health support service by Ministry of Health & Family Welfare.",
+      "name": "Tele-MANAS",
+      "phone": "14416",
+      "region": "India / All States",
+      "category": "Mental Health Support",
       "operatingHours": "24/7",
-      "languages": ["Tamil", "English", "Hindi"],
-      "region": "National",
-      "isVerified": false,
-      "dialerUri": "tel:14416"
+      "isVerified": true
     },
     {
-      "id": "help_02",
-      "category": "CRISIS_COUNSELLING",
-      "serviceName": "KIRAN Helpline",
-      "phoneNumber": "1800-599-0019",
-      "description": "Dedicated toll-free mental health rehabilitation helpline.",
+      "name": "Sneha Suicide Prevention Helpline",
+      "phone": "044-24640050",
+      "region": "Tamil Nadu",
+      "category": "Crisis Helpline",
       "operatingHours": "24/7",
-      "languages": ["Tamil", "English", "Hindi"],
-      "region": "National",
-      "isVerified": false,
-      "dialerUri": "tel:18005990019"
+      "isVerified": true
     }
   ]
 }
 ```
-- **Dialer Rule**: Frontend triggers `window.location.href = dialerUri`. Never automatically initiates calls without explicit user action.
-- **Evidence Requirement**: Phone numbers in development seed data are public reference examples that must be officially verified and documented before marking `isVerified: true`.

@@ -1,0 +1,71 @@
+/* INARO — Global Tailwind + Design System Base
+   Lovable Light Spectrum: Sky blue (#3B82F6) to Violet/Purple (#7C3AED / #8B5CF6)
+*/
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-[#F0F7FF] via-[#F8FAFC] to-[#FAF5FF] text-slate-900 font-sans;
+    min-height: 100dvh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+@layer components {
+  /* Glassmorphic card in Lovable light spectrum */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 20px 60px -15px rgba(124, 58, 237, 0.08);
+  }
+
+  /* Brand gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #3B82F6 0%, #6366F1 50%, #8B5CF6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Primary CTA button */
+  .btn-primary {
+    background: linear-gradient(135deg, #3B82F6 0%, #7C3AED 100%);
+    @apply text-white font-semibold px-6 py-3 rounded-2xl
+           transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/30
+           active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2;
+  }
+
+  /* Secondary ghost button */
+  .btn-ghost {
+    @apply border border-slate-200/80 bg-white/70 hover:bg-white hover:border-slate-300
+           text-slate-700 hover:text-slate-950 font-semibold px-5 py-2.5 rounded-xl
+           shadow-sm transition-all duration-200 active:scale-95;
+  }
+}

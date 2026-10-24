@@ -1,30 +1,24 @@
 # INARO — Developer Setup & Cross-Module Integration Guide
 
-This guide outlines prerequisites, the target multi-service developer workflow, and cross-module integration verification procedures for INARO.
-
-> [!IMPORTANT]
-> **Scaffold vs. Runnable Application Phase Notice**:
-> The repository is currently in the **Master Architecture and Scaffolding Phase**.
-> The files present define contracts, schemas, and folder boundaries. Application manifests (`package.json`), entry points (`main.tsx`, `server.ts`, `app.py`), and operational dependencies are scheduled to be implemented during upcoming module feature branches once the owner approves this foundation.
-> **The startup commands below represent the target operational workflow once package manifests and entrypoints are implemented.**
+This guide outlines prerequisites, the multi-service developer workflow, and cross-module integration verification procedures for INARO.
 
 ---
 
 ## 1. Prerequisites & Environment Setup
 
 Each team member requires:
-- **Node.js**: v18.0.0 or higher
+- **Node.js**: v18.0.0 or higher (v20+ recommended)
 - **Python**: v3.10 or higher
-- **PostgreSQL**: v14 or higher (local installation or Docker container)
-- **Git**: Configured with the member's GitHub handle
+- **MongoDB**: v6.0 or higher (local `mongodb://localhost:27017` or MongoDB Atlas)
+- **Git**: Configured with your GitHub handle
 
 ### 1.1 Clone & Checkout Feature Branch
 ```bash
 git clone https://github.com/T-Rohit-13/AI-BESTIE.git
 cd AI-BESTIE
 
-# Create your assigned feature branch (see TEAM_RULES.md)
-git checkout -b feat/<your-name>-<module-name>
+# Create your assigned feature branch following TEAM_RULES.md
+git checkout -b feature/m<N>-<feature-description>
 ```
 
 ### 1.2 Environment Configuration
@@ -32,91 +26,74 @@ Copy the master environment template:
 ```bash
 cp .env.example .env
 ```
-Open `.env` and configure your local PostgreSQL connection string and test keys. For local development, keep `OTP_PROVIDER=console` so verification codes appear in your backend terminal without needing SMS credentials.
+Ensure you set your local `MONGODB_URI`, `PORT=5000`, `JWT_SECRET`, and `GEMINI_API_KEY`. For local testing, keep `OTP_PROVIDER=console` so verification codes print directly to your terminal.
 
 ---
 
-## 2. Target Service Execution (Post-Implementation)
+## 2. Service Execution & Startup
 
-*Note: Execute these commands once package manifests and module code entrypoints are generated.*
+You can launch all services concurrently from the root directory or run them individually.
 
-### Step 1: Core Backend (`server/`)
+### Option A: Launch All Services (Root Orchestrator)
+```bash
+# 1. Install all dependencies across workspaces
+npm run install:all
+
+# 2. Run client and server concurrently
+npm run dev
+```
+
+### Option B: Run Services Individually
+
+#### 1. Core Backend (`server/`) — Express + Mongoose
 ```bash
 cd server
 npm install
-npx prisma generate
-npx prisma migrate dev
 npm run dev
-# Server starts on http://localhost:5000
+# Server boots on http://localhost:5000
 ```
-
-### Step 2: ML & Audio Microservice (`ml-service/`)
+Verify health:
 ```bash
-cd ml-service
-python -m venv .venv
-# On Windows PowerShell:
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m uvicorn service.app:app --host 0.0.0.0 --port 8000 --reload
-# ML Service starts on http://localhost:8000
+curl http://localhost:5000/health
 ```
 
-### Step 3: Frontend Client (`client/`)
+#### 2. Frontend Client (`client/`) — React + Vite + Tailwind CSS
 ```bash
 cd client
 npm install
 npm run dev
-# Application UI opens on http://localhost:5173
+# Vite dev server boots on http://localhost:5173
 ```
+Open `http://localhost:5173` to interact with the animated landing page.
+
+#### 3. AI Emotion Microservice (`ai_pipeline/`) — FastAPI
+```bash
+cd ai_pipeline
+pip install -r requirements.txt
+python app.py
+# FastAPI server boots on http://localhost:8000
+```
+Verify interactive docs:
+`http://localhost:8000/docs`
 
 ---
 
-## 3. Verifying Inter-Module Contracts
+## 3. End-to-End Integration Verification
 
-To verify that individual modules communicate correctly once endpoints are wired:
-
-### Test 1: Verify Registration & Forgot-Password Flow (Member 1)
-```bash
-# 1. Request registration OTP
-curl -X POST http://localhost:5000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"dev_user\",\"fullName\":\"Dev User\",\"age\":21,\"mobileNumber\":\"9999988888\",\"password\":\"Secret123!\"}"
-
-# 2. Check backend terminal logs for the generated 6-digit OTP code, then verify:
-curl -X POST http://localhost:5000/api/v1/auth/verify-otp \
-  -H "Content-Type: application/json" \
-  -d "{\"mobileNumber\":\"9999988888\",\"otpCode\":\"<CODE_FROM_CONSOLE>\",\"purpose\":\"REGISTER\"}"
-
-# 3. Test Forgot-Password Generic Anti-Enumeration Response:
-curl -X POST http://localhost:5000/api/v1/auth/forgot-password \
-  -H "Content-Type: application/json" \
-  -d "{\"identifier\":\"dev_user\"}"
-# Confirmed: Returns 200 OK whether user exists or not.
-```
-
-### Test 2: Verify Vocal Tone Inference & Avatar Contract (Members 2 & 3 Joint $\to$ Owner Lead)
-```bash
-# Submit a sample WAV audio file to the ML inference service:
-curl -X POST http://localhost:8000/api/v1/ml/infer-vocal-emotion \
-  -F "audio=@tests/fixtures/sample_calm.wav"
-```
-Verify that the output contains the required `avatar_visual_hints` and `inferred_emotion` properties defined in [docs/API_CONTRACTS.md](API_CONTRACTS.md).
-
-### Test 3: Verify Gemini Dialogue Resiliency (Members 2 & 3 Joint Scope)
-Ensure `server/src/modules/chat/` handles both normal Gemini responses and network timeout errors without unhandled promise rejections.
-
-### Test 4: Verify Seven-Day Rolling Safety Evaluation (Members 2 & 3 Joint Scope)
-```bash
-curl -X GET http://localhost:5000/api/v1/safety/rolling-seven-day \
-  -H "Cookie: token=<AUTH_COOKIE>"
-```
-Verify that missing days are ignored and not counted toward `flagged_days_count`.
-
-### Test 5: Verify Dump Mode Isolation (Member 4)
-```bash
-curl -X POST http://localhost:5000/api/v1/dump/entries \
-  -H "Content-Type: application/json" \
-  -H "Cookie: token=<AUTH_COOKIE>" \
-  -d "{\"title\":\"Private Reflection\",\"content\":\"Testing isolation\"}"
-```
-Verify that response confirms entry creation with zero AI advice, and that no conversational message is created in `Message`.
+1. **Auth & Identity Cycle (Member 4)**:
+   - Register a new account via `POST http://localhost:5000/api/v1/auth/register`.
+   - Check server terminal console for 6-digit OTP code (`OTP_PROVIDER=console`).
+   - Submit OTP via `POST http://localhost:5000/api/v1/auth/verify-otp`.
+2. **Acoustic Emotion Inference & Fallback (Member 3)**:
+   - Send sample prosody features to `POST http://localhost:8000/api/v1/analyze-emotion`.
+   - Verify `confidence_scores` sum to 1.0.
+   - Test low confidence input to verify fallback to `'calm'` with `fallback_triggered: true`.
+3. **Dialogue Interaction (Member 2)**:
+   - Send chat message to `POST http://localhost:5000/api/v1/chat/message`.
+   - Verify empathetic response generated via Google Gemini.
+4. **Avatar Visualization (Member 1)**:
+   - Open frontend at `http://localhost:5173`.
+   - Check that the Avatar component correctly morphs facial blendshapes to the detected emotion.
+5. **Dump Mode & Helplines (Member 5)**:
+   - Create a test journal entry via `POST http://localhost:5000/api/v1/dump/entries`.
+   - Query verified crisis helplines at `GET http://localhost:5000/api/v1/helplines`.

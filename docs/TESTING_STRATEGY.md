@@ -8,61 +8,71 @@ This document defines testing methodologies, automated quality gates, contract v
 
 | Level | Scope | Framework / Tool | Responsible Members |
 | :--- | :--- | :--- | :--- |
-| **Unit Tests** | Helper functions, validators, password hashing, token logic | Vitest (Client), Jest (Server), PyTest (ML Service) | All Members |
-| **Contract Tests** | API endpoint schemas, request/response validation | Supertest + Zod schema validation | Member 1 (Auth), Members 2 & 3 (Chat/ML), Member 4 (Dump/Notif) |
-| **ML Model Evaluation** | Audio accuracy, Macro F1, confusion matrices | PyTest, Scikit-learn, Torch | Members 2 & 3 (Joint Scope) |
-| **Integration Tests** | Auth flow, Gemini dialog stream, Dump Mode isolation | Supertest, React Testing Library | Owner & All Members |
-| **Safety & Crisis Gates** | Verification of immediate overlays & 7-day evaluations | Custom crisis test suite | Members 2 & 3 (Joint Scope) & Owner |
+| **Unit Tests** | Helper functions, validators, password hashing, token logic | Vitest (Client), Jest (Server), PyTest (AI Pipeline) | All Members |
+| **Contract Tests** | API endpoint schemas, request/response validation | Supertest + Zod schema validation | Member 4 (Auth), Member 2 (Chat), Member 3 (Emotion), Member 5 (Dump) |
+| **Emotion Fallback Suite** | Acoustic classification, low-confidence defaults to 'calm' | PyTest, FastAPI TestClient | Member 3 (Audio Pipeline) & Member 1 (Avatar UI) |
+| **ML Model Evaluation** | Audio accuracy, Macro F1, confusion matrices | PyTest, Scikit-learn, Librosa | Member 3 (Vocal Tone Microservice) |
+| **Integration Tests** | Auth cycle, Gemini dialogue stream, Dump Mode isolation | Supertest, React Testing Library | Member 1 (Lead) & All Members |
+| **Safety & Crisis Gates** | Verification of crisis helpline triggers & non-clinical copy | Custom crisis test suite | Member 2 (AI Core), Member 5 (Helpline), Member 1 (Lead) |
 
 ---
 
-## 2. Critical Safety & Ethical Test Cases
+## 2. Standardized Emotion Analysis & Fallback Testing (Member 3 & Member 1)
 
-### 2.1 Crisis Intervention Verification (Immediate Tier)
-- **Test Objective**: Verify that when a user expresses acute distress, the application immediately serves the verified helpline resource overlay.
-- **Assertion**:
-  - `safety_assessment.requires_intervention === true`
-  - `safety_assessment.severity_level === "RED"`
-  - UI displays click-to-call buttons for verified crisis hotlines.
-  - No moralizing, clinical, or dismissive text is returned by the AI.
+### 2.1 Confidence Threshold & Fallback Trigger Test
+- **Test Objective**: Ensure that whenever acoustic emotion classification confidence drops below 0.60, the microservice gracefully reverts to `'calm'`.
+- **Assertions**:
+  ```python
+  def test_low_confidence_triggers_calm_fallback(client):
+      # Ambiguous / noisy acoustic features
+      response = client.post("/api/v1/analyze-emotion", json={
+          "pitch_mean": 120.0,
+          "energy_rms": 0.005,
+          "speech_rate": 1.5
+      })
+      data = response.json()
+      assert response.status_code == 200
+      assert data["success"] is True
+      assert data["primary_emotion"] == "calm"
+      assert data["fallback_triggered"] is True
+      assert data["avatar_triggers"]["expression"] == "calm"
+  ```
 
-### 2.2 Seven-Day Rolling Safety Rule Verification
-- **Test Objective**: Verify that the rolling 7-day safety analyzer follows exact thresholds without diagnosing the user.
-- **Missing Data Semantics**:
-  - Missing days mean **no row exists** in `DailyMoodLog`.
-  - The evaluator ignores missing days completely. Missing days are not imputed as negative mood, not counted toward the flagged days numerator, and not treated as indicators of distress.
-- **Test Scenarios**:
-  - **Scenario A (Fewer than 4 days)**: User has 2 low-mood days in past 7 days $\to$ `evaluation_tier` is `"STANDARD_SUPPORT"`, no elevated safety prompt is shown.
-  - **Scenario B (Exactly 4 days)**: User has 4 low-mood days $\to$ `evaluation_tier` is `"MODERATE_SUPPORT"`, prompts supportive reflection.
-  - **Scenario C (More than 4 days)**: User has 5–7 low-mood days $\to$ `evaluation_tier` is `"ELEVATED_SUPPORT"`, prompts helpline resource review and optional trusted-contact outreach.
-  - **Scenario D (Missing Logs)**: User logged on 3 days (all low) and missed 4 days (no rows) $\to$ `flagged_days_count` is 3 (NOT 7), `evaluation_tier` remains `"STANDARD_SUPPORT"`.
-  - **Scenario E (Non-Clinical Language)**: Assert that response payload and UI strings never contain words like "diagnosis", "depressed", or "disorder".
-
-### 2.3 Forgot-Password Security Verification (Member 1)
-- **Test Objective**: Verify that the forgot-password flow is secure and prevents account enumeration.
-- **Test Scenarios**:
-  - **Anti-Enumeration**: POST `/api/v1/auth/forgot-password` with an existing user vs non-existing user returns identical HTTP 200 status and generic message.
-  - **OTP Expiry**: Submitting an OTP after 5 minutes returns HTTP 400 with `OTP_EXPIRED`.
-  - **Attempt Limit**: Submitting 3 incorrect OTP attempts locks the OTP record and requires initiating a new request.
-  - **Single-Use Reset Token**: After password reset, reusing the `resetToken` returns HTTP 401 Unauthorized.
-  - **Session Invalidation**: Completing a password reset increments `User.tokenVersion`, invalidating previously issued JWT access tokens.
-
-### 2.4 Dump Mode Data Isolation Verification (Member 4)
-- **Test Objective**: Guarantee that Dump Mode entries remain private.
-- **Assertion**:
-  - `POST /api/v1/dump/entries` creates an entry with zero automated replies.
-  - User A cannot access User B's dump entries (`GET /api/v1/dump/entries/:id` returns `404 Not Found` or `403 Forbidden`).
-  - Dump entries are never passed into Gemini's context window.
+### 2.2 Corrupted Audio Recovery Test
+- **Test Objective**: Submitting empty bytes, truncated audio files, or corrupted headers must never crash the service or return HTTP 500.
+- **Assertions**:
+  - Response returns HTTP 200 OK.
+  - `fallback_triggered === true` with descriptive reason.
+  - Avatar expression trigger defaults to `"calm"`.
 
 ---
 
-## 3. Mock Providers for Local Development
+## 3. Authentication & Security Testing (Member 4)
 
-To allow offline development and testing without third-party API dependencies:
+### 3.1 Forgot-Password Anti-Enumeration
+- **Test Objective**: Verify that submitting an existing vs non-existing identifier returns identical responses to prevent user harvesting.
+- **Assertions**:
+  - `POST /api/v1/auth/forgot-password` with `"rohit_t"` returns `{ success: true, message: "..." }`.
+  - `POST /api/v1/auth/forgot-password` with `"nonexistent_user"` returns identical `{ success: true, message: "..." }`.
 
-1. **Mock OTP Provider (`ConsoleDevOtpProvider`)**:
-   - Generates deterministic 6-digit OTP codes and outputs them to the server console log.
-   - Bypasses external SMS gateway costs during unit and integration test runs.
-2. **Mock Gemini Chat Provider (`MockGeminiProvider`)**:
-   - Implements the `IChatProvider` interface.
-   - Returns simulated conversational responses and emotion flags without consuming Gemini API tokens during CI test runs.
+### 3.2 OTP Rate Limiting & TTL Enforcement
+- Submitting an OTP after 5 minutes returns `400 Bad Request` with `OTP_EXPIRED`.
+- Exceeding 3 failed attempts invalidates the record and requires a new OTP request.
+- Completing a password reset increments `tokenVersion` on the User document, immediately revoking active JWTs.
+
+---
+
+## 4. Dump Mode Data Privacy & Isolation (Member 5)
+
+### 4.1 Strict Isolation Assertion
+- Dump entries are never passed into Gemini's dialogue context window.
+- User A cannot access User B's entries (`GET /api/v1/dump/entries/:id` returns `404 Not Found` or `403 Forbidden`).
+- Raw dump entries are marked `isEncrypted: true`.
+
+---
+
+## 5. Non-Clinical Language Quality Gate
+
+All user-facing copy, error messages, and documentation must pass automated regex checks:
+- Must **NOT** contain: `diagnosis`, `diagnose`, `disorder`, `clinical treatment`, `cure`, or `depressed patient`.
+- Must use supportive phrasing: `emotional well-being`, `check-in`, `reflection`, `space to unwind`.

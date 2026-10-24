@@ -1,85 +1,79 @@
 # TEAM_OWNERSHIP — INARO Project Ownership & Boundary Matrix
 
-This document defines the strict ownership boundaries for the four team members and the Integration Lead (Owner) working on the INARO repository.
+This document defines the strict module boundaries, file custodianship, and integration interfaces for all **5 team members** working on the INARO repository.
 
 ---
 
 ## 1. Executive Ownership Summary
 
-The INARO team consists of **five individuals**: the Project Owner / Integration Lead and **four Team Members**.
-
-| Role / Identifier | Scope Definition | Primary Modules | Owned Repository Paths |
+| Member / Role | Scope Definition | Key Deliverables | Owned Repository Paths |
 | :--- | :--- | :--- | :--- |
-| **Owner / Lead** | **AI Avatar & Integration Lead** | AI Avatar rendering, facial expressions, viseme mouth-sync, dynamic mood-responsive UI theming, repository governance, CI/CD | `client/src/components/avatar/`<br>`client/src/styles/tokens.css`<br>`docs/`, `.github/`, Scaffolding |
-| **Team Member 1** | **Authentication, Identity & User Management** | User registration, authentication, login, secure password hashing, pluggable OTP engine, forgot-password & reset flow, user profiles, trusted contacts | `server/src/modules/auth/`<br>`server/src/modules/user/`<br>`client/src/components/auth/`<br>`server/prisma/` (Auth & User entities) |
-| **Team Members 2 & 3** *(Joint Ownership)* | **Interactive Mode, AI & Voice Pipeline** | **Jointly owned scope**: AI conversation generation, Gemini API integration, vocal-tone emotion analysis model, datasets/model training & evaluation, speech-to-text (STT), text-to-speech (TTS), 30-day conversation retention & summaries, safety monitoring | `server/src/modules/character/`<br>`server/src/modules/chat/`<br>`server/src/modules/retention/`<br>`server/src/modules/safety/`<br>`ml-service/`<br>`client/src/components/chat/`<br>`client/src/components/voice/` |
-| **Team Member 4** | **Dump Mode, Notifications & Helplines** | Private Dump Mode (text & voice entries CRUD), Daily mood & sleep trackers, notification preferences & delivery engine (inactivity reminders), shared verified helpline directory | `server/src/modules/dump/`<br>`server/src/modules/tracker/`<br>`server/src/modules/notifications/`<br>`server/src/modules/helpline/`<br>`client/src/components/dump/`<br>`client/src/components/tracker/`<br>`client/src/components/helpline/` |
-
-> [!IMPORTANT]
-> **Joint Scope Policy for Members 2 and 3**:
-> Interactive Mode, conversational AI, and the audio/ML pipeline are currently held under **joint ownership**. The precise submodule division between Member 2 and Member 3 (e.g. conversational dialogue orchestration vs. audio acoustic modeling) must be formally confirmed with the Integration Lead before implementation begins. Neither member may unilaterally modify shared AI contracts without mutual agreement and Lead approval.
+| **Member 1 (Owner & Integration Lead)** | **Avatar UI & Landing Experience** | Animated INARO landing page with popping brand title, glassmorphic cards, design tokens (`tokens.css`), Canvas/SVG Avatar rendering engine, viseme lip-sync, expression transitions, CI/CD & PR gatekeeper | `client/src/components/landing/`<br>`client/src/components/avatar/`<br>`client/src/styles/`<br>`docs/ARCHITECTURE.md`<br>Root orchestration (`package.json`, `.github/`) |
+| **Member 2** | **Interactive AI Core & Character Personas** | Character persona management, multi-character prompts, Gemini API backend orchestration, streaming chat responses, context window compaction, 30-day retention worker | `server/src/controllers/character/`<br>`server/src/controllers/conversation/`<br>`server/src/models/Character.js`<br>`server/src/models/Conversation.js`<br>`client/src/components/interactive/` |
+| **Member 3** | **Vocal Tone & Audio Processing Pipeline** | FastAPI vocal-tone emotion detection microservice, acoustic prosody classification, Speech-to-Text (Whisper / Web Speech API), Text-to-Speech (Edge TTS), audio datasets & model weights | `ai_pipeline/`<br>`client/src/components/shared/audio/`<br>`server/src/services/aiEmotionService.js` |
+| **Member 4** | **Authentication & Identity System** | User Mongoose schema & models, password hashing with Argon2id, pluggable OTP verification engine, anti-enumeration forgot-password & reset flows, trusted emergency contacts | `server/src/controllers/auth/`<br>`server/src/models/User.js`<br>`server/src/models/Otp.js`<br>`server/src/routes/auth/`<br>`client/src/components/auth/` |
+| **Member 5** | **Dump Mode, Scheduler & Helplines** | Private Dump Mode journal (text/audio entries), daily mood & sleep trackers, notification scheduler/inactivity reminders, verified counselling helpline directory & fallback router | `server/src/controllers/dump/`<br>`server/src/controllers/tracker/`<br>`server/src/controllers/helpline/`<br>`server/src/models/DumpEntry.js`<br>`server/src/models/DailyTracker.js`<br>`server/src/models/Helpline.js`<br>`client/src/components/dump/`<br>`client/src/components/helpline/` |
 
 ---
 
 ## 2. Detailed Member Responsibilities & Boundaries
 
-### Owner (Integration Lead & Avatar UI)
+### Member 1 (Owner & Integration Lead)
 - **Primary Deliverables**:
-  - AI Avatar rendering engine (Canvas/SVG) with smooth facial expression transitions (`happy`, `sad`, `calm`, `concerned`, `surprised`, `neutral`).
-  - Natural, autonomous blinking loop and speech-synchronized viseme mouth animation.
-  - Dynamic mood-responsive UI theming engine ([tokens.css](client/src/styles/tokens.css)) adapting interface hues smoothly to emotional context.
-  - End-to-end integration contracts governance, pull request reviews, and final release readiness.
+  - **Animated Landing Page**: Modern, responsive landing page featuring the popping brand title animation (`animate-pop-in`), glassmorphic feature cards, floating ambient orbs, and light blue/purple aesthetic (`#0ea5e9` to `#8b5cf6`).
+  - **Avatar UI**: Canvas/SVG procedural avatar supporting facial expressions (`calm`, `happy`, `concerned`, `neutral`), natural blinking intervals, and viseme mouth animation driven by vocal audio streams.
+  - **Design System Tokens**: Master design tokens in [client/src/styles/tokens.css](client/src/styles/tokens.css) providing emotion-responsive palette shifts.
+  - **Repository Governance**: PR reviews, release gating, branch protection verification, and cross-module integration integrity.
 - **Boundaries**:
-  - Consumes the standardized Emotion Analysis Response contract ([docs/API_CONTRACTS.md](docs/API_CONTRACTS.md)).
-  - Does NOT implement internal business logic for Gemini prompts, authentication controllers, or Dump Mode storage.
+  - Consumes emotion analysis output from Member 3 via [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md).
+  - Does NOT alter conversational prompt logic (Member 2), audio ML weights (Member 3), auth controllers (Member 4), or journal storage (Member 5).
 
-### Team Member 1 (Auth, Identity & User Management)
+### Member 2 (Interactive AI Core & Character Personas)
 - **Primary Deliverables**:
-  - Sign-up and sign-in interfaces and backend handlers.
-  - Registration fields: username, full name, age, personal mobile number, password, and optional trusted contact.
-  - Backend validation for all credentials; the frontend never independently determines password or OTP validity.
-  - Pluggable OTP engine (`ConsoleDevOtpProvider` for local dev; SMS provider interface for production) with 5-minute TTL and 3-attempt lockout.
-  - **Complete Forgot-Password Flow**: Identifier submission, anti-enumeration generic responses, OTP verification, secure password reset with Argon2id, single-use `resetTokenHash`, and session revocation via `tokenVersion`.
-  - Trusted contact preferences and verified counselling helpline fallback pathway when trusted contact is omitted.
-  - Database schema custodianship for Auth and User models.
+  - **Multi-Character System**: Custom characters with distinct emotional tones, empathetic backstories, and persona prompts.
+  - **Google Gemini API Integration**: Secure server-side orchestrator handling chat sessions, prompt safety checks, and token-efficient history compaction.
+  - **Context Retention**: 30-day conversational rolling memory and automated session summary generator.
+  - **Interactive Chat Frontend**: Real-time dialogue interface interfacing with the Avatar component.
 - **Boundaries**:
-  - Does NOT alter conversational chat models or character definitions (owned by Members 2 & 3).
-  - Does NOT handle Dump Mode entries or daily reflection logs (owned by Member 4).
+  - Relies on Member 4's auth middleware for user identity (`req.user.id`).
+  - Receives vocal emotion tags from Member 3 to enrich dialogue context.
 
-### Team Members 2 & 3 (Interactive Mode, AI & Voice Pipeline — Joint Scope)
-- **Primary Deliverables (Jointly Shared)**:
-  - Multi-character system: user-configurable AI characters with distinct personalities and system prompts.
-  - Gemini conversation engine: Server-side API integration, context packing, streaming responses, and bilingual support (English and Tamil `தமிழ்`).
-  - Voice processing: Speech-to-Text (STT) and Text-to-Speech (TTS) integration with Tamil support.
-  - Vocal Tone Emotion Analysis: Dataset ingestion, preprocessing, training/fine-tuning, evaluation metrics, and standalone inference serving.
-  - Structured Emotion Contract generation: Producing the exact JSON contract consumed by the Owner's avatar module.
-  - 30-Day conversation retention and rolling semantic summarization worker.
-  - Safety assessment: Immediate safety triage for acute distress and rolling 7-day safety reflection rules.
-- **Boundaries**:
-  - Must deliver against the agreed contract in [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md).
-  - Must coordinate submodule allocation with the Lead before dividing code directories.
-
-### Team Member 4 (Dump Mode, Notifications & Helplines)
+### Member 3 (Vocal Tone Microservice & Audio Pipeline)
 - **Primary Deliverables**:
-  - Private Dump Mode: Unguided journaling space supporting text and voice-to-text entries. Full entry management (create, view, rename, delete). **Zero automated AI advice or replies in Dump Mode**.
-  - Daily mood (1-5) and sleep-duration tracking dials and trends interface.
-  - Missing data rule: Days without logs have no row created in `DailyMoodLog` and are **never** interpreted as depressive episodes or distress.
-  - Notification Subsystem: Separation of notification delivery infrastructure from policy rules. Friendly, supportive reminders dispatched when Dump Mode has been inactive for >24 hours, respecting user opt-in preferences.
-  - Shared Helpline Directory: Verified government and crisis hotline database, categorization, and click-to-call (`tel:`) dialer launch without unauthorized automatic calling. New entries default to unverified (`isVerified: false`) until evidence is verified.
+  - **FastAPI Emotion Microservice**: Standalone Python service (`ai_pipeline/app.py`) analyzing pitch, energy, and prosody to output normalized emotion confidence vectors.
+  - **Safety Fallback**: Enforces fallback to `'calm'` whenever confidence drops below the 0.60 threshold.
+  - **Speech-to-Text (STT)**: Integration with Whisper API and Web Speech API for seamless voice input.
+  - **Text-to-Speech (TTS)**: Integration with Edge TTS generating natural audio waveforms with viseme cue timings.
+  - **Datasets & Weights**: Custodianship of audio training datasets (`ai_pipeline/datasets/`) and ONNX model checkpoints (`ai_pipeline/models/`).
 - **Boundaries**:
-  - Does NOT route private Dump Mode entries into Gemini conversation context or training sets.
-  - Does NOT modify core user authentication or OTP validation (owned by Member 1).
+  - Strictly adheres to the JSON schema defined in [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md).
+  - Does NOT write directly to the primary MongoDB database; operates strictly as an inference microservice.
+
+### Member 4 (Auth System, User DB Models & OTP)
+- **Primary Deliverables**:
+  - **User & OTP Mongoose Models**: Master schemas for user identity, hashed passwords, verification state, and TTL-indexed OTP codes.
+  - **Registration & Login**: Secure endpoints with robust schema validation, anti-enumeration protections, and rate limiting.
+  - **Pluggable OTP Engine**: Dev console OTP simulator and production SMS adapter.
+  - **Password Reset Flow**: Secure tokenized reset cycle invalidating existing sessions via `tokenVersion`.
+  - **Trusted Contacts**: Emergency contact schema and validation; triggers helpline fallback when omitted.
+- **Boundaries**:
+  - Does NOT build chat or journaling UI.
+  - Exposes `authMiddleware` to protect Member 2 and Member 5 routes.
+
+### Member 5 (Dump Mode Journal, Scheduler & Helplines)
+- **Primary Deliverables**:
+  - **Dump Mode Journal**: Private cathartic journal supporting quick text brain-dumps and audio voice notes.
+  - **Daily Well-Being Trackers**: Daily mood rating (1-10) and sleep duration/quality tracking.
+  - **Notification Scheduler**: Background task checking user inactivity and triggering gentle check-in reminders.
+  - **Verified Helpline Directory**: Searchable directory of verified mental health crisis helplines, with immediate regional fallback when user omits a trusted contact or signals distress.
+- **Boundaries**:
+  - Relies on Member 4's user session for data isolation.
+  - Does NOT perform acoustic emotion classification (Member 3).
 
 ---
 
-## 3. Shared Files Governance & Change Protocol
+## 3. Communication & Integration Protocol
 
-1. [server/prisma/schema.prisma](server/prisma/schema.prisma) (Database Schema):
-   - **Primary Custodians**: Member 1 (Auth/User) and Member 4 (Dump/Helpline/Trackers); Members 2 & 3 (Chat/Characters).
-   - **Protocol**: Any schema addition or migration requires coordination with all impacted members and sign-off from the Integration Lead.
-2. [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md) & Shared TypeScript Types ([client/src/types/contracts.ts](client/src/types/contracts.ts)):
-   - **Protocol**: If an API contract is altered, the change must be submitted as a separate PR with approvals from both provider and consumer members.
-3. [.env.example](.env.example):
-   - **Protocol**: Any new environment variable must be documented with clear comments and committed to `.env.example`. Never commit actual secret keys.
-4. [client/src/styles/tokens.css](client/src/styles/tokens.css) (Global Design Tokens):
-   - **Primary Custodian**: Owner (Lead). Component-level styling lives in component folders; global theme variables require Owner review.
+1. **Contract Adherence**: Any change to API request/response payloads requires an update to [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md) and unanimous approval from Member 1 and the affected member.
+2. **Database Migration**: Schema additions in `server/src/models/` must be coordinated with Member 4 (Schema Lead) and reflected in [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md).
+3. **Escalation**: Unresolved integration conflicts or cross-module boundary disputes are escalated to Member 1 (Project Owner) for definitive resolution.
