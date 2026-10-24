@@ -134,7 +134,7 @@ export const SignUpStep: React.FC<SignUpStepProps> = ({
     setIsLoading(true);
 
     try {
-      const resp = await fetch('http://localhost:5000/auth/send-otp', {
+      await fetch('http://localhost:5000/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,13 +143,8 @@ export const SignUpStep: React.FC<SignUpStepProps> = ({
           username: formData.username,
         }),
       });
-      const data = await resp.json();
-      if (data && data.code) {
-        sessionStorage.setItem('inaro_dev_otp', data.code);
-      }
     } catch {
-      // In offline/mock mode, default dev code is 1234
-      sessionStorage.setItem('inaro_dev_otp', '1234');
+      // Allow proceeding to verification screen
     } finally {
       setIsLoading(false);
       onNext();

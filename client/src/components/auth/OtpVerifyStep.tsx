@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ArrowRight, ShieldCheck, Mail, AlertCircle, CheckCircle2, RefreshCw, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ShieldCheck, Mail, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface OtpVerifyStepProps {
   mobileNumber: string;
@@ -21,7 +21,7 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [dispatchedCode, setDispatchedCode] = useState<string>('1234');
+  const [resendNotice, setResendNotice] = useState<string | null>(null);
 
   const inputRefs = [
     useRef<HTMLInputElement>(null),
@@ -29,14 +29,6 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
   ];
-
-  // Pick up dispatched code from sessionStorage or default 1234
-  useEffect(() => {
-    const saved = sessionStorage.getItem('inaro_dev_otp');
-    if (saved) {
-      setDispatchedCode(saved);
-    }
-  }, []);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -108,7 +100,7 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
 
       const data = await resp.json();
       if (!resp.ok || data.success === false) {
-        throw new Error(data.error || 'Verification failed. Please check the code.');
+        throw new Error(data.error || 'Invalid verification code. Please check your SMS and try again.');
       }
 
       if (data.token) {
@@ -120,19 +112,7 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
 
       onVerified();
     } catch (err: any) {
-      // If code matches test code or dev fallback, allow smooth progress
-      if (codeToVerify === '1234' || codeToVerify === dispatchedCode) {
-        const dummyUser = {
-          id: `usr_${Date.now()}`,
-          username: signUpData?.username || 'user',
-          fullName: signUpData?.fullName || 'Friend',
-          mobileNumber,
-        };
-        localStorage.setItem('inaro_user', JSON.stringify(dummyUser));
-        onVerified();
-      } else {
-        setErrorMessage(err.message || 'Invalid verification code. Please check and try again.');
-      }
+      setErrorMessage(err.message || 'Invalid verification code. Please check your SMS and try again.');
     } finally {
       setIsVerifying(false);
     }
@@ -147,17 +127,10 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
     submitOtp(enteredCode);
   };
 
-  const handleAutoFill = (code: string) => {
-    const chars = code.slice(0, 4).split('');
-    const newDigits = [chars[0] || '1', chars[1] || '2', chars[2] || '3', chars[3] || '4'];
-    setDigits(newDigits);
-    setErrorMessage(null);
-    inputRefs[3].current?.focus();
-  };
-
   const handleResend = async () => {
     setIsResending(true);
     setErrorMessage(null);
+    setResendNotice(null);
     setDigits(['', '', '', '']);
 
     try {
@@ -167,13 +140,12 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
         body: JSON.stringify({ mobileNumber, countryCode }),
       });
       const data = await resp.json();
-      if (data.code) {
-        setDispatchedCode(data.code);
-        sessionStorage.setItem('inaro_dev_otp', data.code);
+      if (data.success) {
+        setResendNotice('New verification code dispatched via SMS!');
       }
       setTimerSeconds(45);
     } catch {
-      setDispatchedCode('1234');
+      setResendNotice('Verification SMS requested.');
       setTimerSeconds(45);
     } finally {
       setIsResending(false);
@@ -204,29 +176,26 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
 
         <h2 className="screen-title text-center text-slate-900 font-extrabold text-2xl tracking-tight">Verify OTP</h2>
         <p className="screen-subtitle text-center text-xs text-slate-500 max-w-xs mx-auto">
-          Enter the 4-digit code dispatched to <span className="font-semibold text-purple-700">{formattedTarget}</span>
+          Enter the 4-digit code sent via SMS to <span className="font-semibold text-purple-700">{formattedTarget}</span>
         </p>
       </div>
 
-      {/* Live Dispatched Status Banner with One-Click Auto-Fill */}
-      <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 via-indigo-50/70 to-purple-50 border border-purple-200/90 rounded-2xl flex items-center justify-between gap-2 shadow-sm">
-        <div className="flex items-center gap-2 text-xs text-purple-900 font-medium">
-          <span className="relative flex h-2.5 w-2.5 shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-          </span>
-          <span className="truncate">SMS Sent • Code: <strong className="text-purple-950 font-black">{dispatchedCode}</strong></span>
-        </div>
-        <button
-          type="button"
-          onClick={() => handleAutoFill(dispatchedCode)}
-          className="shrink-0 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all flex items-center gap-1 cursor-pointer"
-          title="Quickly fill verification code"
-        >
-          <Zap className="w-3 h-3 text-amber-300" />
-          <span>Quick Fill</span>
-        </button>
+      {/* Dispatched Notification Banner without exposing code */}
+      <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 via-indigo-50/70 to-purple-50 border border-purple-200/90 rounded-2xl flex items-center gap-2.5 shadow-xs">
+        <span className="relative flex h-2.5 w-2.5 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span className="text-xs text-purple-950 font-medium leading-relaxed">
+          A 4-digit verification code has been dispatched to <strong>{formattedTarget}</strong>. Please check your SMS and enter the code below.
+        </span>
       </div>
+
+      {resendNotice && (
+        <div className="mb-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
+          <span>✓ {resendNotice}</span>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="mb-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
@@ -264,7 +233,7 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
         {/* Resend OTP Row */}
         <div className="text-center text-xs text-slate-600 mb-5">
           {timerSeconds > 0 ? (
-            <span>Resend code in <strong className="text-purple-700 font-semibold">{timerSeconds}s</strong></span>
+            <span>Didn't receive SMS? Resend code in <strong className="text-purple-700 font-semibold">{timerSeconds}s</strong></span>
           ) : (
             <button
               type="button"

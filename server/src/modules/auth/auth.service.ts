@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import axios from 'axios';
 
 export interface PendingOtpRecord {
   mobile: string;
@@ -44,16 +45,13 @@ class AuthService {
   async sendOtp(mobile: string, countryCode = '+91', username?: string): Promise<{
     success: boolean;
     message: string;
-    code: string;
     expiresInSeconds: number;
   }> {
     const cleanMobile = mobile.replace(/\D/g, '');
     const cleanCode = countryCode.trim() || '+91';
 
-    // In dev or standard testing, default to 1234 or crypto random 4-digit
-    const isDev = process.env.NODE_ENV !== 'production' || process.env.OTP_PROVIDER === 'console';
-    // Use 1234 for predictable quick testing, but can be generated
-    const code = '1234';
+    // Generate cryptographic dynamic 4-digit code
+    const code = crypto.randomInt(1000, 9999).toString();
     const now = Date.now();
     const expiresInSeconds = (parseInt(process.env.OTP_EXPIRY_MINUTES || '5', 10)) * 60;
 
@@ -68,21 +66,65 @@ class AuthService {
 
     this.pendingOtps.set(cleanMobile, record);
 
-    // SMS dispatch log & simulated provider
     const fullNumber = `${cleanCode}${cleanMobile}`;
     const smsMessage = `[INARO] Your verification code is ${code}. Valid for 5 minutes. Do not share this code.`;
 
+    // 1. Dispatch real cellular SMS via Twilio if configured
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+      try {
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`;
+        const params = new URLSearchParams();
+        const formattedTo = fullNumber.startsWith('+') ? fullNumber : `+${fullNumber}`;
+        params.append('To', formattedTo);
+        params.append('From', process.env.TWILIO_PHONE_NUMBER);
+        params.append('Body', smsMessage);
+
+        await axios.post(twilioUrl, params.toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
+          },
+          timeout: 6000,
+        });
+        console.log(`[Twilio SMS] Cellular SMS successfully sent to ${formattedTo}`);
+      } catch (twilioErr: any) {
+        console.warn(`[Twilio SMS Warning] Cellular dispatch failed:`, twilioErr?.response?.data || twilioErr?.message);
+      }
+    }
+
+    // 2. Dispatch real cellular SMS via Fast2SMS if configured (Indian numbers)
+    if (process.env.FAST2SMS_API_KEY && cleanCode === '+91') {
+      try {
+        await axios.post(
+          'https://www.fast2sms.com/dev/bulkV2',
+          {
+            route: 'otp',
+            variables_values: code,
+            numbers: cleanMobile,
+          },
+          {
+            headers: { authorization: process.env.FAST2SMS_API_KEY },
+            timeout: 6000,
+          }
+        );
+        console.log(`[Fast2SMS] Cellular SMS dispatched to ${cleanMobile}`);
+      } catch (fastErr: any) {
+        console.warn('[Fast2SMS Warning] Dispatch failed:', fastErr?.message);
+      }
+    }
+
+    // Server console audit log
     console.log('\n======================================================');
-    console.log(`[INARO SMS OTP DISPATCHED]`);
+    console.log(`[INARO SMS OTP DISPATCHED TO CARRIER]`);
     console.log(`Recipient:   ${fullNumber}`);
     console.log(`Code:        ${code}`);
     console.log(`Content:     ${smsMessage}`);
     console.log('======================================================\n');
 
+    // Never expose the OTP code directly in the client response
     return {
       success: true,
-      message: `Verification code sent to ${fullNumber}`,
-      code,
+      message: `Verification code sent to registered mobile number ${fullNumber}`,
       expiresInSeconds,
     };
   }
