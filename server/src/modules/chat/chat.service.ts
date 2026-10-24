@@ -152,8 +152,12 @@ CRITICAL BEHAVIORAL AND PERSONA DIRECTIVES:
 4. If the user is playing a game with you (like Tic-Tac-Toe, Would You Rather, Word Association, or Riddles), enthusiastically play along as their game buddy! Make your move, tease affectionately, and celebrate wins!
 5. Keep your responses concise (1-3 sentences), warm, and natural like a real text message.`;
 
-    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const candidateModels = [
+      process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+      'gemini-3.5-flash-lite',
+      'gemini-flash-latest',
+      'gemini-3.8-flash',
+    ];
 
     // Format conversation history for Gemini
     const contents: any[] = [];
@@ -181,13 +185,23 @@ CRITICAL BEHAVIORAL AND PERSONA DIRECTIVES:
       },
     };
 
-    const response = await axios.post(url, body, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 8000,
-    });
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await axios.post(url, body, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 8000,
+        });
 
-    const candidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return candidate ? candidate.trim() : null;
+        const candidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (candidate) return candidate.trim();
+      } catch (err: any) {
+        // Try next candidate model if current is busy/deprecated
+        continue;
+      }
+    }
+
+    return null;
   }
 
   private generateFriendFallback(
