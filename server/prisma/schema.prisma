@@ -28,11 +28,15 @@ model User {
   
   trustedContact        TrustedContact?
   characters            Character[]
+  dumpSpaceName         String            @default("My Dump") @map("dump_space_name")
+  lastDumpAt            DateTime?         @map("last_dump_at")
   dumpEntries           DumpEntry[]
   dailyMoodLogs         DailyMoodLog[]
   dailySleepLogs        DailySleepLog[]
   notificationPref      NotificationPreference?
   safetyAuditLogs       SafetyAuditLog[]
+
+  @@map("users")
 }
 
 model OtpVerification {
@@ -123,16 +127,15 @@ model ConversationSummary {
 // -----------------------------------------------------------------------------
 model DumpEntry {
   id           String    @id @default(uuid())
-  userId       String
+  userId       String    @map("user_id")
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title        String    @default("Untitled Entry")
-  content      String
-  audioNoteUrl String?
-  moodTag      String?   // Optional self-selected mood tag
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  text         String    @db.Text
+  mood         Int?
+  createdAt    DateTime  @default(now()) @map("created_at")
 
-  @@index([userId, createdAt])
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("dump_entries")
 }
 
 model DailyMoodLog {

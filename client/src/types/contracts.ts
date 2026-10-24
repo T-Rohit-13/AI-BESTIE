@@ -91,6 +91,22 @@ export interface HelplineResourceItem {
   dialerUri: string;
 }
 
+export interface DumpEntry {
+  id: string;
+  text: string;
+  mood?: number | null;
+  created_at: string;
+}
+
+export interface DumpEntriesResponse {
+  entries: DumpEntry[];
+  nextCursor: string | null;
+}
+
+export interface DumpSpaceNameResponse {
+  name: string;
+}
+
 export interface DumpEntryItem {
   id: string;
   title: string;

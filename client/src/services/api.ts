@@ -20,7 +20,7 @@ import {
   SupportStatusResponse,
   TrustedContact,
 } from '../types/interactive';
-import { HelplineResourceItem } from '../types/contracts';
+import { HelplineResourceItem, DumpEntry, DumpEntriesResponse, DumpSpaceNameResponse } from '../types/contracts';
 
 const API_BASE_URL = '/api/v1';
 
@@ -269,3 +269,47 @@ export async function removeTrustedContact(): Promise<void> {
     method: 'DELETE',
   });
 }
+
+// ==========================================
+// 7. DUMP MODE API (Member 4)
+// ==========================================
+
+export async function getDumpSpaceName(): Promise<DumpSpaceNameResponse> {
+  return request<DumpSpaceNameResponse>('/dump/space-name');
+}
+
+export async function updateDumpSpaceName(name: string): Promise<DumpSpaceNameResponse> {
+  return request<DumpSpaceNameResponse>('/dump/space-name', {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function createDumpEntry(payload: { text: string; mood?: number | null }): Promise<DumpEntry> {
+  return request<DumpEntry>('/dump/entries', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getDumpEntries(params?: { limit?: number; cursor?: string }): Promise<DumpEntriesResponse> {
+  const query = new URLSearchParams();
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.cursor) query.set('cursor', params.cursor);
+  const qStr = query.toString();
+  return request<DumpEntriesResponse>(`/dump/entries${qStr ? `?${qStr}` : ''}`);
+}
+
+export async function deleteDumpEntry(id: string): Promise<void> {
+  return request<void>(`/dump/entries/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function deleteAllDumpEntries(): Promise<void> {
+  return request<void>('/dump/entries', {
+    method: 'DELETE',
+    body: JSON.stringify({ confirm: true }),
+  });
+}
+

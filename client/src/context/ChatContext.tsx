@@ -32,9 +32,38 @@ const getInitialGreeting = (characterName: string, preset: string): string => {
   }
 };
 
+const CHAT_STORAGE_PREFIX = 'inaro_companion_chat_history_';
+
+const loadSavedMessages = (): Record<string, ChatMessage[]> => {
+  if (typeof window === 'undefined') return {};
+  const map: Record<string, ChatMessage[]> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(CHAT_STORAGE_PREFIX)) {
+        const charId = key.substring(CHAT_STORAGE_PREFIX.length);
+        const data = localStorage.getItem(key);
+        if (data) {
+          map[charId] = JSON.parse(data);
+        }
+      }
+    }
+  } catch {}
+  return map;
+};
+
+const saveMessagesForCharacter = (charId: string, msgs: ChatMessage[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${CHAT_STORAGE_PREFIX}${charId}`, JSON.stringify(msgs));
+  } catch {}
+};
+
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Chat state strictly keyed by characterId in memory (NEVER stored in localStorage, NEVER logged to console)
-  const [messagesByCharacter, setMessagesByCharacter] = useState<Record<string, ChatMessage[]>>({});
+  // Chat state strictly keyed by characterId and persistent per companion
+  const [messagesByCharacter, setMessagesByCharacter] = useState<Record<string, ChatMessage[]>>(() =>
+    loadSavedMessages()
+  );
   const [respondingByCharacter, setRespondingByCharacter] = useState<Record<string, boolean>>({});
 
   const getMessages = useCallback(
@@ -55,7 +84,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (characterId: string, characterName: string, preset: string) => {
       setMessagesByCharacter((prev) => {
         if (prev[characterId] && prev[characterId].length > 0) {
-          return prev; // Already initialized
+          return prev; // Already initialized with existing chat history
         }
         const initialAiMessage: ChatMessage = {
           id: `msg_init_${characterId}`,
@@ -65,9 +94,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           status: 'sent',
         };
+        const updated = [initialAiMessage];
+        saveMessagesForCharacter(characterId, updated);
         return {
           ...prev,
-          [characterId]: [initialAiMessage],
+          [characterId]: updated,
         };
       });
     },
@@ -257,12 +288,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore API errors on clear
     }
+    try {
+      localStorage.removeItem(`${CHAT_STORAGE_PREFIX}${characterId}`);
+    } catch {}
     // Empties ONLY that chat's visible messages. Never touches other chats or daily entries.
     setMessagesByCharacter((prev) => ({
       ...prev,
       [characterId]: [],
     }));
   };
+
+  // Sync any state changes to localStorage
+  React.useEffect(() => {
+    try {
+      Object.entries(messagesByCharacter).forEach(([cId, msgs]) => {
+        if (msgs && msgs.length > 0) {
+          saveMessagesForCharacter(cId, msgs);
+        }
+      });
+    } catch {}
+  }, [messagesByCharacter]);
 
   return (
     <ChatContext.Provider

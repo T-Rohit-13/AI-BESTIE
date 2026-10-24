@@ -92,15 +92,13 @@ export const DailyCheckInModal: React.FC = () => {
               </p>
             </div>
           </div>
-          {hasSubmittedToday && (
-            <button
-              onClick={closeCheckInModal}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-              aria-label="Close check-in modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={closeCheckInModal}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+            aria-label="Close check-in modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -204,6 +202,15 @@ export const DailyCheckInModal: React.FC = () => {
                 'Continue to Interactive Mode'
               )}
             </button>
+            {!hasSubmittedToday && (
+              <button
+                type="button"
+                onClick={closeCheckInModal}
+                className="w-full mt-2 py-2 text-xs font-semibold text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                Skip for today
+              </button>
+            )}
           </div>
         </form>
       </div>

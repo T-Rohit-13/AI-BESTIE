@@ -4,7 +4,8 @@ import { useDailyEntry } from '../../context/DailyEntryContext';
 import { Character, CharacterFormData } from '../../types/interactive';
 import { CharacterCard } from './CharacterCard';
 import { CharacterFormModal } from './CharacterFormModal';
-import { Plus, Search, Sparkles, Lock, ShieldCheck, ArrowRight, Smile } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Search, Sparkles, Lock, ShieldCheck, ArrowRight, Smile, PhoneCall } from 'lucide-react';
 
 export const CharactersList: React.FC = () => {
   const { characters, isLoading, createCharacter, updateCharacter } = useCharacters();
@@ -65,11 +66,11 @@ export const CharactersList: React.FC = () => {
             A little space to talk, reflect, and be yourself. Choose or create a companion to express your thoughts freely without judgment.
           </p>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto mb-6">
+          {/* Action Buttons: Create, Daily Check-In, and Dedicated Crisis Helpline */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xl mx-auto mb-6">
             <button
               onClick={handleOpenCreate}
-              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 transition cursor-pointer"
+              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 transition cursor-pointer"
             >
               <span>Create Character</span>
               <ArrowRight className="w-4 h-4" />
@@ -77,11 +78,20 @@ export const CharactersList: React.FC = () => {
 
             <button
               onClick={openCheckInModal}
-              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-white hover:bg-purple-50/80 text-slate-700 font-semibold text-xs sm:text-sm border border-slate-200/90 shadow-2xs hover:border-purple-300 transition cursor-pointer"
+              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-white hover:bg-purple-50/80 text-slate-700 font-semibold text-xs sm:text-sm border border-slate-200/90 shadow-2xs hover:border-purple-300 transition cursor-pointer"
             >
               <Smile className="w-4 h-4 text-purple-600" />
               <span>Daily Check-In</span>
             </button>
+
+            <Link
+              to="/support"
+              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs sm:text-sm border border-rose-200/80 shadow-2xs hover:border-rose-300 transition cursor-pointer"
+              title="Verified Crisis Helplines & Emergency Support"
+            >
+              <PhoneCall className="w-4 h-4 text-rose-600 animate-pulse" />
+              <span>Crisis Helpline</span>
+            </Link>
           </div>
 
           {/* Feature Badges */}
@@ -202,6 +212,20 @@ export const CharactersList: React.FC = () => {
         onSubmit={handleModalSubmit}
         initialCharacter={editingCharacter}
       />
+
+      {/* Dedicated Floating Helpline Button on Home Page */}
+      <aside className="fixed bottom-6 right-6 z-40">
+        <Link
+          to="/support"
+          className="flex items-center gap-2 px-4 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-rose-600/30 hover:shadow-rose-600/50 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+          title="Need immediate help? Reach verified crisis helplines 24/7"
+          aria-label="Open Crisis Helpline directory"
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+          <PhoneCall className="w-4 h-4" />
+          <span>Need Help? SOS Helpline</span>
+        </Link>
+      </aside>
     </div>
   );
 };

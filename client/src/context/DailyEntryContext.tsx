@@ -16,6 +16,13 @@ interface DailyEntryContextType {
 
 const DailyEntryContext = createContext<DailyEntryContextType | undefined>(undefined);
 
+const CHECKIN_LAST_ASKED_KEY = 'inaro_checkin_last_asked_date';
+const CHECKIN_SUBMITTED_KEY = 'inaro_checkin_submitted_date';
+
+const getTodayDateString = (): string => {
+  return new Date().toISOString().split('T')[0];
+};
+
 // In-memory daily entry state strictly isolated from character personality state
 export const DailyEntryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [dailyEntry, setDailyEntry] = useState<DailyEntry | null>(null);
@@ -26,23 +33,57 @@ export const DailyEntryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const checkTodayEntry = useCallback(async () => {
     setIsLoading(true);
+    const todayStr = getTodayDateString();
+
+    let alreadyAskedToday = false;
+    let alreadySubmittedToday = false;
+
+    try {
+      const lastAsked = localStorage.getItem(CHECKIN_LAST_ASKED_KEY);
+      const lastSubmitted = localStorage.getItem(CHECKIN_SUBMITTED_KEY);
+      alreadyAskedToday = lastAsked === todayStr;
+      alreadySubmittedToday = lastSubmitted === todayStr;
+    } catch {
+      // LocalStorage not available or restricted in environment
+    }
+
     try {
       const entry = await api.getDailyEntryToday();
       if (entry) {
         setDailyEntry(entry);
         setHasSubmittedToday(true);
         setIsModalOpen(false);
+        try {
+          localStorage.setItem(CHECKIN_SUBMITTED_KEY, todayStr);
+          localStorage.setItem(CHECKIN_LAST_ASKED_KEY, todayStr);
+        } catch {}
       } else {
-        // No entry exists for today -> open check-in prompt
         setDailyEntry(null);
-        setHasSubmittedToday(false);
-        setIsModalOpen(true);
+        setHasSubmittedToday(alreadySubmittedToday);
+
+        // ONLY prompt automatically once per day!
+        if (alreadyAskedToday || alreadySubmittedToday) {
+          setIsModalOpen(false);
+        } else {
+          setIsModalOpen(true);
+          try {
+            localStorage.setItem(CHECKIN_LAST_ASKED_KEY, todayStr);
+          } catch {}
+        }
       }
     } catch {
-      // If network fails in demo mode, simulate no entry exists yet
+      // If network fails in demo mode, check if already prompted today
       setDailyEntry(null);
-      setHasSubmittedToday(false);
-      setIsModalOpen(true);
+      setHasSubmittedToday(alreadySubmittedToday);
+
+      if (alreadyAskedToday || alreadySubmittedToday) {
+        setIsModalOpen(false);
+      } else {
+        setIsModalOpen(true);
+        try {
+          localStorage.setItem(CHECKIN_LAST_ASKED_KEY, todayStr);
+        } catch {}
+      }
     } finally {
       setIsLoading(false);
     }
@@ -53,7 +94,12 @@ export const DailyEntryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [checkTodayEntry]);
 
   const openCheckInModal = () => setIsModalOpen(true);
-  const closeCheckInModal = () => setIsModalOpen(false);
+  const closeCheckInModal = () => {
+    setIsModalOpen(false);
+    try {
+      localStorage.setItem(CHECKIN_LAST_ASKED_KEY, getTodayDateString());
+    } catch {}
+  };
   const clearToast = () => setToastMessage(null);
 
   const saveCheckIn = async (sleepHours: number, mood: MoodType): Promise<boolean> => {
@@ -98,6 +144,10 @@ export const DailyEntryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setDailyEntry(savedEntry);
       setHasSubmittedToday(true);
       setIsModalOpen(false);
+      try {
+        localStorage.setItem(CHECKIN_SUBMITTED_KEY, todayStr);
+        localStorage.setItem(CHECKIN_LAST_ASKED_KEY, todayStr);
+      } catch {}
 
       // Auto clear toast after 4 seconds
       setTimeout(() => {

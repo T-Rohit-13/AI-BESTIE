@@ -57,6 +57,7 @@ ml-service/datasets/processed/*
 !ml-service/datasets/processed/.gitkeep
 ml-service/models/checkpoints/*
 !ml-service/models/checkpoints/.gitkeep
+!ml-service/models/checkpoints/*.json
 *.pt
 *.pth
 *.onnx

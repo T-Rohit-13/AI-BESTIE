@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DailyCheckInModal } from '../components/tracker/DailyCheckInModal';
 import { DailyEntryProvider } from '../context/DailyEntryContext';
 import * as api from '../services/api';
@@ -8,6 +8,11 @@ import * as api from '../services/api';
 vi.mock('../services/api');
 
 describe('DailyCheckInModal Component', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
   it('validates sleep hours step of 0.5 and range 0-24', async () => {
     vi.mocked(api.getDailyEntryToday).mockResolvedValue(null);
 
@@ -76,6 +81,23 @@ describe('DailyCheckInModal Component', () => {
         sleepHours: 8.0,
         mood: 'Happy',
       });
+    });
+  });
+
+  it('asks check-in only once per day and suppresses subsequent auto-prompts on the same day', async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    localStorage.setItem('inaro_checkin_last_asked_date', todayStr);
+    vi.mocked(api.getDailyEntryToday).mockResolvedValue(null);
+
+    render(
+      <DailyEntryProvider>
+        <DailyCheckInModal />
+      </DailyEntryProvider>
+    );
+
+    // Modal should NOT be displayed because it was already asked today
+    await waitFor(() => {
+      expect(screen.queryByText(/Daily Well-Being Check-In/i)).not.toBeInTheDocument();
     });
   });
 });

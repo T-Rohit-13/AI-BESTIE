@@ -19,110 +19,275 @@ export const CuteMascot: React.FC<CuteMascotProps> = ({ onInteract }) => {
   return (
     <div
       onClick={handleClick}
-      className="relative flex items-center justify-center cursor-pointer select-none py-2 group"
-      title="Tap me to say hi!"
+      className="relative flex items-center justify-center cursor-pointer select-none py-1 group"
+      title="INARO Empathetic AI Companion"
     >
-      {/* Floating 3D Rings and Crystals */}
-      <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border-4 border-white/90 shadow-md shadow-purple-200/50 -rotate-12 animate-float-slow pointer-events-none" />
-      <div className="absolute -right-2 top-4 w-5 h-5 bg-gradient-to-br from-pink-300 to-purple-400 rounded-md rotate-45 shadow-sm opacity-80 animate-float-reverse pointer-events-none" />
-      <div className="absolute left-4 top-2 w-4 h-4 bg-gradient-to-br from-purple-300 to-indigo-300 rounded-sm rotate-12 shadow-sm opacity-70 animate-float-slow pointer-events-none" />
-      <div className="absolute right-6 bottom-4 w-6 h-6 bg-gradient-to-tr from-violet-300 to-fuchsia-300 rounded-md rotate-45 shadow-sm opacity-70 animate-float-slow pointer-events-none" />
-
-      {/* Speech bubble: "Click me to interact!" */}
-      <div className="absolute -right-6 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#18181b] text-white text-[11px] font-medium rounded-xl shadow-lg border border-white/10 group-hover:scale-105 transition-transform z-10">
-        <span>Click me to interact!</span>
-        <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-[#18181b] rotate-45 border-l border-b border-white/10" />
-      </div>
-
-      {/* Cute Character SVG Canvas */}
-      <div className={`transition-transform duration-300 ${isHappy ? 'scale-110 -translate-y-2' : 'group-hover:scale-105'}`}>
+      {/* Mascot Canvas */}
+      <div
+        className={`transition-all duration-300 ease-out ${
+          isHappy ? 'scale-110 -translate-y-2' : 'group-hover:scale-105 group-hover:-translate-y-1'
+        }`}
+      >
         <svg
-          width="170"
-          height="160"
-          viewBox="0 0 170 160"
+          width="260"
+          height="220"
+          viewBox="0 0 240 200"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="drop-shadow-xl"
+          className="drop-shadow-lg"
         >
           <defs>
-            {/* Soft Ambient Body Shadow */}
-            <radialGradient id="bodyGrad" cx="45%" cy="35%" r="65%">
+            {/* 3D Pearlescent Body Radial Gradient */}
+            <radialGradient id="mascotBody3D" cx="40%" cy="32%" r="65%">
               <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="70%" stopColor="#f8f6fe" />
-              <stop offset="100%" stopColor="#e4daf9" />
+              <stop offset="45%" stopColor="#faf7ff" />
+              <stop offset="78%" stopColor="#ece2fb" />
+              <stop offset="100%" stopColor="#dbcdfb" />
             </radialGradient>
-            {/* Belly highlight */}
-            <radialGradient id="bellyGrad" cx="50%" cy="50%" r="50%">
+
+            {/* Belly Crescent Radial Gradient */}
+            <radialGradient id="mascotBellyGrad" cx="50%" cy="35%" r="60%">
               <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="100%" stopColor="#f3eeff" />
+              <stop offset="85%" stopColor="#f7f3fe" />
+              <stop offset="100%" stopColor="#ece3fc" />
             </radialGradient>
-            {/* Blushing cheeks */}
-            <radialGradient id="blushPink" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#fb7185" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+
+            {/* Feet and Limbs Gradient */}
+            <linearGradient id="mascotLimbGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="70%" stopColor="#f3edfd" />
+              <stop offset="100%" stopColor="#ded0fb" />
+            </linearGradient>
+
+            {/* Horns Gradient */}
+            <linearGradient id="mascotHornGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="60%" stopColor="#f4eeff" />
+              <stop offset="100%" stopColor="#ded0fc" />
+            </linearGradient>
+
+            {/* Ground Shadow */}
+            <radialGradient id="mascotGroundShadow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#9065e0" stopOpacity="0.45" />
+              <stop offset="50%" stopColor="#bfa8f5" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#bfa8f5" stopOpacity="0" />
             </radialGradient>
-            {/* Soft ground shadow */}
-            <radialGradient id="groundShadow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+
+            {/* 3D Torus Ring Gradient */}
+            <linearGradient id="torusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="50%" stopColor="#e9e1fc" />
+              <stop offset="100%" stopColor="#cbbaf7" />
+            </linearGradient>
+
+            {/* Blush Gradient */}
+            <radialGradient id="mascotBlushGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#fb7185" stopOpacity="0.95" />
+              <stop offset="65%" stopColor="#f43f5e" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="#fda4af" stopOpacity="0.4" />
             </radialGradient>
           </defs>
 
-          {/* Cast Shadow */}
-          <ellipse cx="85" cy="148" rx="55" ry="10" fill="url(#groundShadow)" />
+          {/* ========================================================= */}
+          {/* FLOATING 3D CHARMS & CRYSTALS (Matching Reference Picture) */}
+          {/* ========================================================= */}
 
-          {/* Little Feet */}
-          <ellipse cx="68" cy="140" rx="14" ry="9" fill="url(#bodyGrad)" />
-          <ellipse cx="102" cy="140" rx="14" ry="9" fill="url(#bodyGrad)" />
+          {/* Top-Left Faceted Crystal Gem */}
+          <g className="animate-float-slow" style={{ transformOrigin: '38px 55px' }}>
+            <polygon points="38,42 48,50 38,58 28,50" fill="#ede9fe" />
+            <polygon points="38,42 48,50 43,62 33,62" fill="#ddd6fe" />
+            <polygon points="38,42 28,50 33,62" fill="#c4b5fd" />
+            <polygon points="38,58 48,50 43,62 33,62" fill="#ffffff" opacity="0.6" />
+          </g>
 
-          {/* Little Hands/Arms */}
-          <ellipse cx="44" cy="98" rx="10" ry="14" transform="rotate(25 44 98)" fill="url(#bodyGrad)" />
-          <ellipse cx="126" cy="98" rx="10" ry="14" transform="rotate(-25 126 98)" fill="url(#bodyGrad)" />
+          {/* Floating Torus (Donut Ring) on Left Hand */}
+          <g className="animate-float-reverse" style={{ transformOrigin: '48px 116px' }}>
+            <ellipse
+              cx="48"
+              cy="116"
+              rx="10"
+              ry="16"
+              fill="none"
+              stroke="url(#torusGrad)"
+              strokeWidth="5"
+              transform="rotate(-18 48 116)"
+              className="drop-shadow-sm"
+            />
+            {/* Top Rim Specular Glint */}
+            <path
+              d="M 44 102 A 10 16 0 0 1 52 104"
+              stroke="#ffffff"
+              strokeWidth="2"
+              strokeLinecap="round"
+              fill="none"
+              transform="rotate(-18 48 116)"
+            />
+          </g>
 
-          {/* Main Chubby Body */}
-          <ellipse cx="85" cy="85" rx="46" ry="48" fill="url(#bodyGrad)" />
+          {/* Top-Right Faceted Gem (Pink/Lilac) */}
+          <g className="animate-float-slow" style={{ transformOrigin: '190px 42px' }}>
+            <polygon points="190,30 200,38 190,48 180,38" fill="#fbcfe8" />
+            <polygon points="190,30 200,38 196,52 184,52" fill="#f472b6" opacity="0.85" />
+            <polygon points="190,30 180,38 184,52" fill="#e9d5ff" />
+            <polygon points="190,48 200,38 196,52 184,52" fill="#ffffff" opacity="0.7" />
+          </g>
 
-          {/* Little Ears / Antennae */}
-          <path d="M 62 43 C 60 30, 68 25, 73 38 Z" fill="url(#bodyGrad)" />
-          <path d="M 108 43 C 110 30, 102 25, 97 38 Z" fill="url(#bodyGrad)" />
+          {/* Mid-Right Purple Diamond Crystal */}
+          <g className="animate-float-reverse" style={{ transformOrigin: '202px 90px' }}>
+            <polygon points="202,78 212,90 202,102 192,90" fill="#a855f7" opacity="0.85" />
+            <polygon points="202,78 212,90 202,102" fill="#c084fc" opacity="0.75" />
+            <polygon points="202,78 192,90 202,86" fill="#e9d5ff" opacity="0.9" />
+          </g>
 
-          {/* Belly Curve */}
-          <ellipse cx="85" cy="98" rx="32" ry="26" fill="url(#bellyGrad)" opacity="0.9" />
+          {/* ========================================================= */}
+          {/* MASCOT BODY, LIMBS, AND SHADOWS                           */}
+          {/* ========================================================= */}
 
-          {/* Blushing Cheeks */}
-          <circle cx="58" cy="88" r="7" fill="url(#blushPink)" />
-          <circle cx="112" cy="88" r="7" fill="url(#blushPink)" />
+          {/* Ground Contact Shadow */}
+          <ellipse cx="120" cy="166" rx="58" ry="12" fill="url(#mascotGroundShadow)" />
 
-          {/* Eyes */}
+          {/* Feet (Left & Right) */}
+          <ellipse cx="100" cy="158" rx="17" ry="10" fill="url(#mascotLimbGrad)" />
+          <ellipse cx="140" cy="158" rx="17" ry="10" fill="url(#mascotLimbGrad)" />
+
+          {/* Arms / Little Hands */}
+          {/* Left Arm (tilted slightly up toward the torus) */}
+          <ellipse
+            cx="76"
+            cy="114"
+            rx="11"
+            ry="16"
+            transform="rotate(22 76 114)"
+            fill="url(#mascotLimbGrad)"
+          />
+          {/* Right Arm */}
+          <ellipse
+            cx="164"
+            cy="114"
+            rx="11"
+            ry="16"
+            transform="rotate(-22 164 114)"
+            fill="url(#mascotLimbGrad)"
+          />
+
+          {/* Main Marshmallow Body Sphere */}
+          <ellipse cx="120" cy="106" rx="52" ry="50" fill="url(#mascotBody3D)" />
+
+          {/* Cute Horns / Soft Ears */}
+          {/* Left Horn */}
+          <path
+            d="M 94 62 C 90 44, 94 36, 100 42 C 104 46, 107 55, 108 61 Z"
+            fill="url(#mascotHornGrad)"
+          />
+          {/* Right Horn */}
+          <path
+            d="M 146 62 C 150 44, 146 36, 140 42 C 136 46, 133 55, 132 61 Z"
+            fill="url(#mascotHornGrad)"
+          />
+
+          {/* Distinct White Belly Patch (from reference picture) */}
+          <ellipse cx="120" cy="120" rx="38" ry="22" fill="url(#mascotBellyGrad)" />
+
+          {/* ========================================================= */}
+          {/* FACIAL EXPRESSIONS (EXACT MATCH TO REFERENCE PICTURE)      */}
+          {/* ========================================================= */}
+
+          {/* Pink Cheeks (Rhombus/Heart shape with rounded corners) */}
+          <g fill="url(#mascotBlushGrad)">
+            {/* Left Cheek */}
+            <path
+              d="M 86 102 Q 91 107 86 112 Q 81 107 86 102 Z"
+              transform="scale(1.3) translate(-17, -26)"
+              className="drop-shadow-sm"
+            />
+            {/* Right Cheek */}
+            <path
+              d="M 154 102 Q 159 107 154 112 Q 149 107 154 102 Z"
+              transform="scale(1.3) translate(-37, -26)"
+              className="drop-shadow-sm"
+            />
+          </g>
+
+          {/* Eyebrows (Horizontal bold dark bars from reference picture) */}
+          <rect
+            x="91"
+            y="76"
+            width="17"
+            height="4"
+            rx="2"
+            fill="#18181b"
+            transform="rotate(-2 99.5 78)"
+          />
+          <rect
+            x="132"
+            y="76"
+            width="17"
+            height="4"
+            rx="2"
+            fill="#18181b"
+            transform="rotate(2 140.5 78)"
+          />
+
+          {/* Eyes (Glossy Dark Round Eyes with Specular Sparkle from Reference) */}
           {isBlinking ? (
             <>
-              {/* Closed smiling curved eyes */}
-              <path d="M 64 78 Q 71 83 78 78" stroke="#18181b" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-              <path d="M 92 78 Q 99 83 106 78" stroke="#18181b" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              {/* Happy Blinking Curved Eyes */}
+              <path
+                d="M 91 95 Q 98 102 105 95"
+                stroke="#18181b"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d="M 135 95 Q 142 102 149 95"
+                stroke="#18181b"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                fill="none"
+              />
             </>
           ) : (
             <>
-              {/* Cute round open eyes */}
-              <ellipse cx="71" cy="78" rx="3.5" ry="5.5" fill="#18181b" />
-              <ellipse cx="99" cy="78" rx="3.5" ry="5.5" fill="#18181b" />
-              {/* Eye Catchlights */}
-              <circle cx="72" cy="76" r="1.5" fill="#ffffff" />
-              <circle cx="100" cy="76" r="1.5" fill="#ffffff" />
+              {/* Left Eye (Viewer's Left) */}
+              <g>
+                <ellipse cx="98" cy="94" rx="8" ry="8.5" fill="#18181b" />
+                {/* Crisp Specular Catchlight Sparkle (Upper Right of Pupil) */}
+                <circle cx="101.5" cy="91.5" r="3" fill="#ffffff" />
+                <circle cx="95.5" cy="96.5" r="1.2" fill="#ffffff" opacity="0.6" />
+              </g>
+
+              {/* Right Eye (Viewer's Right) */}
+              <g>
+                <ellipse cx="142" cy="94" rx="8" ry="8.5" fill="#18181b" />
+                {/* Crisp Specular Catchlight Sparkle (Upper Left of Pupil) */}
+                <circle cx="138.5" cy="91.5" r="3" fill="#ffffff" />
+                <circle cx="144.5" cy="96.5" r="1.2" fill="#ffffff" opacity="0.6" />
+              </g>
             </>
           )}
 
-          {/* Eyebrows */}
-          <path d="M 65 69 Q 71 67 76 70" stroke="#18181b" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-          <path d="M 94 70 Q 99 67 105 69" stroke="#18181b" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-
-          {/* Smiling Mouth */}
+          {/* Cute Smiling Mouth (Gentle curve from reference picture) */}
           {isHappy ? (
-            <path d="M 80 88 Q 85 96 90 88" stroke="#18181b" strokeWidth="2.5" strokeLinecap="round" fill="#f43f5e" />
+            <path
+              d="M 113 103 Q 120 113 127 103 Z"
+              fill="#f43f5e"
+              stroke="#18181b"
+              strokeWidth="2.2"
+              strokeLinejoin="round"
+            />
           ) : (
-            <path d="M 81 88 Q 85 93 89 88" stroke="#18181b" strokeWidth="2" strokeLinecap="round" fill="none" />
+            <path
+              d="M 114 103 Q 120 109 126 103"
+              stroke="#18181b"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              fill="none"
+            />
           )}
         </svg>
       </div>
     </div>
   );
 };
+
