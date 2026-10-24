@@ -1,6 +1,6 @@
-# INARO — Database Schema & Data Dictionary
+# INARO — Database Schema & Mongoose Data Models
 
-This document details the PostgreSQL relational database schema, entity relationships, indexes, 30-day retention policies, secure token lifecycles, and data privacy safeguards for INARO.
+This document details the complete MongoDB database architecture using **Mongoose ODM**. It covers entity definitions, validation rules, indexing strategies, TTL cleanup policies, and data privacy safeguards across all INARO modules.
 
 ---
 
@@ -8,142 +8,503 @@ This document details the PostgreSQL relational database schema, entity relation
 
 ```mermaid
 erDiagram
-    User ||--o| TrustedContact : "has (Member 1)"
-    User ||--o{ Character : "creates (Members 2 & 3)"
-    User ||--o{ DumpEntry : "writes (Member 4)"
-    User ||--o{ DailyMoodLog : "records (Member 4)"
-    User ||--o{ DailySleepLog : "records (Member 4)"
-    User ||--o| NotificationPreference : "configures (Member 4)"
-    User ||--o{ SafetyAuditLog : "generates (Members 2 & 3)"
-    
-    Character ||--o{ Conversation : "has"
-    Conversation ||--o{ Message : "contains"
-    Conversation ||--o{ ConversationSummary : "condenses"
+    User ||--o{ OTP : "requests (Member 4)"
+    User ||--o{ Conversation : "participates in (Member 2)"
+    Character ||--o{ Conversation : "hosted in (Member 2)"
+    User ||--o{ DailyTracker : "logs (Member 5)"
+    User ||--o{ DumpEntry : "dumps (Member 5)"
+    User }o--o| Helpline : "assigned fallback (Member 5)"
+
+    User {
+        ObjectId _id PK
+        string username UK
+        string name
+        int age
+        string personalMobile UK
+        boolean isMobileVerified
+        string passwordHash
+        string trustedPersonMobile
+        object assignedHelpline
+        object location
+        int tokenVersion
+        date createdAt
+        date updatedAt
+    }
+
+    OTP {
+        ObjectId _id PK
+        string mobile
+        string otpHash
+        string purpose
+        int attempts
+        date expiresAt "TTL index"
+    }
+
+    Character {
+        ObjectId _id PK
+        string name
+        string avatarId
+        string personaPrompt
+        string voiceId
+        string language
+        boolean isDefault
+        date createdAt
+    }
+
+    Conversation {
+        ObjectId _id PK
+        ObjectId userId FK
+        ObjectId characterId FK
+        string sessionTitle
+        array messages
+        string summary
+        date retentionExpiresAt "30-day TTL index"
+    }
+
+    DailyTracker {
+        ObjectId _id PK
+        ObjectId userId FK
+        date date
+        int moodScore
+        float sleepHours
+        string sleepQuality
+        string notes
+    }
+
+    DumpEntry {
+        ObjectId _id PK
+        ObjectId userId FK
+        string entryType
+        string content
+        string audioUrl
+        float duration
+        string sentimentTag
+        boolean isEncrypted
+    }
+
+    Helpline {
+        ObjectId _id PK
+        string name
+        string phone
+        string region
+        string category
+        string operatingHours
+        array language
+        boolean isVerified
+    }
 ```
 
 ---
 
-## 2. Table Definitions & Data Dictionary
+## 2. Master Mongoose Schema Definitions
 
-### 2.1 Table: `User` (Owner: Member 1)
-Stores user credentials, profile metadata, and verification state.
-- `id` (UUID, PK): Unique user identifier.
-- `username` (VARCHAR(30), Unique, Indexed): User login handle.
-- `fullName` (VARCHAR(100)): Full name for personalizing greeting.
-- `age` (INTEGER): Age check.
-- `mobileNumber` (VARCHAR(15), Unique, Indexed): Primary personal contact.
-- `isMobileVerified` (BOOLEAN): Mobile ownership verified via OTP.
-- `passwordHash` (TEXT): Argon2id hashed password string.
-- `tokenVersion` (INTEGER, Default: 0): Incremented upon password reset to instantly invalidate active JWT sessions across all devices.
-- `createdAt` / `updatedAt` (TIMESTAMP).
+### 2.1 User Schema (Owner: Member 4)
+File: `server/src/models/User.js`
 
-### 2.2 Table: `OtpVerification` (Owner: Member 1)
-Transient verification codes and reset authorization tokens.
-- `id` (UUID, PK): Unique verification record ID.
-- `identifier` (VARCHAR(50), Indexed): Destination mobile number or username.
-- `codeHash` (TEXT): Cryptographic hash (SHA-256) of 6-digit OTP code; plaintext is never stored.
-- `purpose` (VARCHAR(20)): `"REGISTER"` or `"PASSWORD_RESET"`.
-- `resetTokenHash` (TEXT, Nullable, Unique): Cryptographic hash (SHA-256) of single-use reset authorization token.
-- `expiresAt` (TIMESTAMP): Expiry timestamp (strict 5-minute TTL for OTP).
-- `resetTokenExpiresAt` (TIMESTAMP, Nullable): Expiry timestamp (strict 10-minute TTL for password reset completion).
-- `attempts` (INTEGER, Default: 0): Failed verification attempt counter. Reaching 3 failed attempts locks the code.
-- `isConsumed` (BOOLEAN, Default: false): Single-use enforcement flag. Marked `true` upon verification.
-- `createdAt` (TIMESTAMP, Default: now()).
+```javascript
+import mongoose from 'mongoose';
 
-### 2.3 Table: `TrustedContact` (Owner: Member 1)
-Emergency support contact provided during registration.
-- `id` (UUID, PK).
-- `userId` (UUID, FK -> User.id, Unique): One-to-one with user.
-- `contactName` (VARCHAR(100)): Name of the trusted individual.
-- `mobileNumber` (VARCHAR(15)): Trusted person's phone number.
-- `consentGiven` (BOOLEAN): User confirmed consent for emergency notifications.
-- **Fallback Rule**: When omitted or consent is withheld, user is routed to the verified counselling helpline pathway.
+const UserSchema = new mongoose.Schema(
+  {
+    username: {
+      type: String,
+      required: [true, 'Username is required'],
+      unique: true,
+      trim: true,
+      lowercase: true,
+      minlength: [3, 'Username must be at least 3 characters'],
+      maxlength: [30, 'Username cannot exceed 30 characters'],
+      index: true,
+    },
+    name: {
+      type: String,
+      required: [true, 'Full name is required'],
+      trim: true,
+      maxlength: [100, 'Name cannot exceed 100 characters'],
+    },
+    age: {
+      type: Number,
+      required: [true, 'Age is required'],
+      min: [13, 'User must be at least 13 years old'],
+      max: [120, 'Invalid age provided'],
+    },
+    personalMobile: {
+      type: String,
+      required: [true, 'Personal mobile number is required'],
+      unique: true,
+      trim: true,
+      match: [/^[0-9]{10}$/, 'Mobile number must be a valid 10-digit number'],
+      index: true,
+    },
+    isMobileVerified: {
+      type: Boolean,
+      default: false,
+    },
+    passwordHash: {
+      type: String,
+      required: [true, 'Password hash is required'],
+    },
+    trustedPersonMobile: {
+      type: String,
+      trim: true,
+      match: [/^[0-9]{10}$/, 'Trusted person mobile must be a valid 10-digit number'],
+      default: null,
+    },
+    assignedHelpline: {
+      name: { type: String, default: 'Tele-MANAS' },
+      phone: { type: String, default: '14416' },
+      region: { type: String, default: 'India / All States' },
+    },
+    location: {
+      state: { type: String, trim: true, default: '' },
+      country: { type: String, trim: true, default: 'India' },
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      description: 'Incremented on password reset to invalidate active JWTs',
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-### 2.4 Table: `Character` (Owner: Members 2 & 3 — Joint Scope)
-Custom AI personalities configured by the user.
-- `id` (UUID, PK).
-- `userId` (UUID, FK -> User.id, Indexed): Character owner.
-- `name` (VARCHAR(50)): e.g. "Maya", "Kavitha".
-- `avatarStyle` (VARCHAR(30)): Visual preset identifier.
-- `systemPrompt` (TEXT): Base instruction passed to Gemini API.
-- `toneDescription` (VARCHAR(100)): e.g. "Calm, empathetic, supportive".
-- `isArchived` (BOOLEAN): Soft delete flag.
-
-### 2.5 Table: `Message` & `ConversationSummary` (Owner: Members 2 & 3 — Joint Scope)
-Manages conversational history and 30-day retention rolling memory.
-- `Message`:
-  - `id` (UUID, PK).
-  - `conversationId` (UUID, FK -> Conversation.id, Indexed).
-  - `sender` (VARCHAR(10)): `"USER"` or `"AI"`.
-  - `textContent` (TEXT): The message payload.
-  - `audioUrl` (TEXT, Nullable): Ephemeral voice note reference.
-  - `createdAt` (TIMESTAMP, Indexed): Evaluated by 30-day retention purge worker.
-- `ConversationSummary`:
-  - `id` (UUID, PK).
-  - `conversationId` (UUID, FK -> Conversation.id, Indexed).
-  - `summaryText` (TEXT): Condensed rolling memory context.
-  - `periodStart` / `periodEnd` (TIMESTAMP): Date coverage of the summary.
-
-### 2.6 Table: `DumpEntry` (Owner: Member 4)
-Private unstructured thoughts space.
-- `id` (UUID, PK).
-- `userId` (UUID, FK -> User.id, Indexed).
-- `title` (VARCHAR(150)): Entry title (default: "Untitled Entry").
-- `content` (TEXT): Private body text.
-- `moodTag` (VARCHAR(30), Nullable): Optional tag selected by user.
-- `createdAt` / `updatedAt` (TIMESTAMP).
-- **Privacy Rule**: Dump entries are isolated from Gemini API context and training sets.
-
-### 2.7 Table: `DailyMoodLog` & `DailySleepLog` (Owner: Member 4)
-- `DailyMoodLog`: Unique constraint on `[userId, date]`. Records `moodRating` (1-5 scale).
-- `DailySleepLog`: Unique constraint on `[userId, date]`. Records `durationHours` (Float).
-- **Missing Value Semantics**:
-  - If a user misses logging for a date, **no row exists in the database**.
-  - **The rolling seven-day evaluator must ignore missing days rather than treating them as flagged or distress indicators.**
-  - Missing days are not backfilled, not assigned default negative scores, and not treated as evidence of depression.
-
-### 2.8 Table: `HelplineResource` (Owner: Member 4 / Shared)
-Directory of institutional mental health support services.
-- `id` (VARCHAR(20), PK).
-- `category` (VARCHAR(50)): e.g. "GOVERNMENT", "CRISIS_COUNSELLING", "STUDENT_SUPPORT".
-- `serviceName` (VARCHAR(100)): Official organization title.
-- `phoneNumber` (VARCHAR(20)): Dialable phone number.
-- `description` (TEXT): Scope of services provided.
-- `operatingHours` (VARCHAR(50)): e.g. "24/7", "9 AM - 6 PM".
-- `languageSupported` (VARCHAR(100)): e.g. "Tamil, English, Hindi".
-- `region` (VARCHAR(50)): e.g. "National", "Tamil Nadu".
-- `isVerified` (BOOLEAN, Default: `false`): **New resources are unverified by default.** Requires an explicit administrative verification process with documented evidence before marking `true`. Phone numbers must not be claimed as verified without documented confirmation.
-
-### 2.9 Table: `SafetyAuditLog` (Owner: Members 2 & 3 — Joint Scope)
-- `id` (UUID, PK).
-- `userId` (UUID, FK -> User.id, Indexed).
-- `severityLevel` (VARCHAR(10)): Strictly uppercase `"GREEN"` | `"AMBER"` | `"RED"`.
-- `evaluationTier` (VARCHAR(30)): `"IMMEDIATE_ACUTE"` | `"SEVEN_DAY_MODERATE"` | `"SEVEN_DAY_ELEVATED"`.
-- `actionTaken` (VARCHAR(50)): `"DISPLAYED_HELPLINE_MODAL"` | `"OFFERED_TRUSTED_CONTACT"`.
-- `timestamp` (TIMESTAMP, Indexed).
+export default mongoose.model('User', UserSchema);
+```
 
 ---
 
-## 3. Seven-Day Rolling Safety & 30-Day Retention Rules
+### 2.2 OTP Schema (Owner: Member 4)
+File: `server/src/models/Otp.js`
 
-### 3.1 Seven-Day Rolling Safety Query Logic
-```sql
--- Query recorded logs over the preceding 7 days
-SELECT date, moodRating 
-FROM "DailyMoodLog"
-WHERE "userId" = :userId 
-  AND date >= CURRENT_DATE - INTERVAL '6 days'
-ORDER BY date DESC;
+```javascript
+import mongoose from 'mongoose';
+
+const OtpSchema = new mongoose.Schema(
+  {
+    mobile: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+    otpHash: {
+      type: String,
+      required: true,
+    },
+    purpose: {
+      type: String,
+      enum: ['REGISTRATION', 'PASSWORD_RESET'],
+      required: true,
+    },
+    attempts: {
+      type: Number,
+      default: 0,
+      max: 3,
+    },
+    expiresAt: {
+      type: Date,
+      required: true,
+      default: () => new Date(Date.now() + 5 * 60 * 1000), // 5 minutes TTL
+      index: { expires: 0 }, // Native MongoDB TTL index auto-deletes expired docs
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model('Otp', OtpSchema);
 ```
-- Exactly 4 low-mood days ($\le 2/5$): Flags tier as `MODERATE_SUPPORT`.
-- More than 4 low-mood days: Flags tier as `ELEVATED_SUPPORT`.
-- Fewer than 4 low-mood days: Flags tier as `STANDARD_SUPPORT`.
-- **Missing Days**: Missing days return no row. Missing days are **completely ignored** and are never counted toward the flagged days count.
 
-### 3.2 30-Day Retention & Purge Protocol
-1. **Raw Message Retention**:
-   - `Message` rows older than 30 days are processed nightly by a background cron job.
-   - The worker generates a high-level semantic summary using Gemini (`generateConversationSummary()`) and writes it to `ConversationSummary`.
-   - The individual raw `Message` records and any temporary audio storage references are permanently deleted via database transaction.
-2. **User-Initiated Purge**:
-   - A user can trigger "Clear Chat History" on any character, immediately executing a cascade delete on all messages and summaries for that conversation.
+---
+
+### 2.3 Character Schema (Owner: Member 2)
+File: `server/src/models/Character.js`
+
+```javascript
+import mongoose from 'mongoose';
+
+const CharacterSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    avatarId: {
+      type: String,
+      required: true,
+      default: 'inaro_default_avatar',
+    },
+    personaPrompt: {
+      type: String,
+      required: true,
+      description: 'System prompt configuring empathy style, tone, and active listening rules',
+    },
+    voiceId: {
+      type: String,
+      default: 'en-US-JennyNeural',
+    },
+    language: {
+      type: String,
+      enum: ['en', 'ta', 'bilingual'],
+      default: 'bilingual',
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model('Character', CharacterSchema);
+```
+
+---
+
+### 2.4 Conversation Schema (Owner: Member 2)
+File: `server/src/models/Conversation.js`
+
+```javascript
+import mongoose from 'mongoose';
+
+const MessageSubSchema = new mongoose.Schema(
+  {
+    sender: {
+      type: String,
+      enum: ['user', 'assistant'],
+      required: true,
+    },
+    text: {
+      type: String,
+      required: true,
+    },
+    audioUrl: {
+      type: String,
+      default: null,
+    },
+    emotionTag: {
+      type: String,
+      enum: ['calm', 'happy', 'sad', 'anxious', 'angry', 'neutral'],
+      default: 'calm',
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
+const ConversationSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    characterId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Character',
+      required: true,
+    },
+    sessionTitle: {
+      type: String,
+      default: 'Daily Check-in',
+    },
+    messages: [MessageSubSchema],
+    summary: {
+      type: String,
+      default: '',
+    },
+    retentionExpiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30-Day TTL
+      index: { expires: 0 }, // Automatic 30-day retention enforcement
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model('Conversation', ConversationSchema);
+```
+
+---
+
+### 2.5 DailyTracker Schema (Owner: Member 5)
+File: `server/src/models/DailyTracker.js`
+
+```javascript
+import mongoose from 'mongoose';
+
+const DailyTrackerSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    date: {
+      type: Date,
+      required: true,
+      default: () => new Date().setHours(0, 0, 0, 0),
+    },
+    moodScore: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 10,
+    },
+    sleepHours: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 24,
+    },
+    sleepQuality: {
+      type: String,
+      enum: ['poor', 'fair', 'good', 'excellent'],
+      default: 'good',
+    },
+    notes: {
+      type: String,
+      maxlength: 500,
+      default: '',
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+DailyTrackerSchema.index({ userId: 1, date: 1 }, { unique: true });
+
+export default mongoose.model('DailyTracker', DailyTrackerSchema);
+```
+
+---
+
+### 2.6 DumpEntry Schema (Owner: Member 5)
+File: `server/src/models/DumpEntry.js`
+
+```javascript
+import mongoose from 'mongoose';
+
+const DumpEntrySchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    entryType: {
+      type: String,
+      enum: ['text', 'voice'],
+      required: true,
+    },
+    content: {
+      type: String,
+      default: '',
+      description: 'Raw cathartic text entry (encrypted at rest)',
+    },
+    audioUrl: {
+      type: String,
+      default: null,
+      description: 'Path or signed S3/GridFS URL for recorded voice notes',
+    },
+    duration: {
+      type: Number,
+      default: 0,
+      description: 'Voice note duration in seconds',
+    },
+    sentimentTag: {
+      type: String,
+      default: 'unspecified',
+    },
+    isEncrypted: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model('DumpEntry', DumpEntrySchema);
+```
+
+---
+
+### 2.7 Helpline Schema (Owner: Member 5)
+File: `server/src/models/Helpline.js`
+
+```javascript
+import mongoose from 'mongoose';
+
+const HelplineSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    region: {
+      type: String,
+      required: true,
+      index: true,
+      trim: true,
+    },
+    category: {
+      type: String,
+      default: 'Crisis Support',
+    },
+    operatingHours: {
+      type: String,
+      default: '24/7',
+    },
+    language: {
+      type: [String],
+      default: ['English', 'Tamil', 'Hindi'],
+    },
+    isVerified: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model('Helpline', HelplineSchema);
+```
+
+---
+
+## 3. Indexing & Retention Strategy
+
+1. **User Identity Speed**: Compound and unique indexes on `username` and `personalMobile` ensure $O(1)$ lookups during authentication and registration.
+2. **5-Minute OTP Ephemerality**: `expiresAt` is configured with MongoDB's native `{ expires: 0 }` TTL index, automatically dropping expired records with zero background cron overhead.
+3. **30-Day Chat Retention Compliance**: `Conversation.retentionExpiresAt` enforces strict 30-day user privacy retention by purging dialogues after 30 days unless a summary is archived.
+4. **Daily Mood Trackers Uniqueness**: Compound index on `{ userId: 1, date: 1 }` prevents duplicate tracker records per calendar day.

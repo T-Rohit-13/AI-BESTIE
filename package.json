@@ -1,0 +1,23 @@
+{
+  "name": "inaro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "INARO — Empathetic AI Companion for Mental Well-Being",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\" --names \"CLIENT,SERVER\" --prefix-colors \"cyan,green\"",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:ai": "uvicorn app:app --app-dir ai_pipeline --reload --port 8000",
+    "dev:all": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\" \"npm run dev:ai\" --names \"CLIENT,SERVER,AI\" --prefix-colors \"cyan,green,magenta\"",
+    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
+    "build": "npm run build --prefix client",
+    "lint": "npm run lint --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

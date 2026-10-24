@@ -1,15 +1,12 @@
 # INARO — AI Architecture, Vocal ML Pipeline & Gemini Integration
 
-This document defines the machine learning architecture, dataset development lifecycle, audio feature engineering, evaluation standards, and the explicit boundary between the custom vocal tone emotion model and the Gemini 1.5 conversational API.
-
-> [!NOTE]
-> **Team Scope Notice**: The entire AI and audio pipeline (Interactive Mode, Gemini dialogue orchestration, datasets, model training, STT/TTS, and vocal-tone emotion analysis) is under **joint ownership by Team Members 2 and 3**.
+This document defines the machine learning architecture, dataset development lifecycle, audio feature engineering, evaluation standards, and the explicit boundary between the custom vocal tone emotion microservice (Member 3) and the Gemini conversational API (Member 2).
 
 ---
 
-## 1. Clear Division of AI Responsibilities
+## 1. Division of AI Responsibilities
 
-To avoid architectural confusion and ensure modular reliability, AI operations are strictly partitioned across independent components:
+AI operations are cleanly partitioned between **Member 2 (Dialogue Core)** and **Member 3 (Audio & Emotion Pipeline)**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -17,126 +14,84 @@ To avoid architectural confusion and ensure modular reliability, AI operations a
 └───────────────────┬────────────────────────────────┬───────────────────┘
                     │                                │
                     ▼                                ▼
-       [Acoustic Feature Stream]           [Speech-to-Text (STT)]
+       [Acoustic Prosody Stream]           [Speech-to-Text (STT)]
+                    │                         (Whisper / Web Speech)
+                    ▼                                │
+       ┌────────────────────────┐                    │
+       │   AI EMOTION PIPELINE  │                    │
+       │   (Member 3 - FastAPI) │                    │
+       └────────────┬───────────┘                    │
                     │                                │
                     ▼                                ▼
-       ┌────────────────────────┐         ┌────────────────────────┐
-       │   CUSTOM VOCAL ML      │         │     TRANSCRIPTION      │
-       │ (Members 2 & 3 Joint)  │         │    (Tamil / English)   │
-       └────────────┬───────────┘         └────────────┬───────────┘
-                    │                                  │
-                    ▼                                  ▼
-         Inferred Vocal Emotion               User Message Text
-          (e.g., "concerned")                          │
-                    │                                  ▼
+         Inferred Vocal Emotion             User Message Text
+          (e.g., "concerned")                        │
+                    │                                ▼
                     │                     ┌────────────────────────┐
-                    │                     │    GEMINI API          │
-                    │                     │ (Members 2 & 3 Joint)  │
+                    │                     │    GEMINI API CLIENT   │
+                    │                     │  (Member 2 - Express)  │
                     │                     └────────────┬───────────┘
                     │                                  │
                     ▼                                  ▼
          ┌─────────────────────┐              Empathic AI Response
-         │    OWNER AVATAR     │                       │
+         │   MEMBER 1 AVATAR   │                       │
          │  (Facial Emotion &  │◄──────────────────────┘
-         │   Mouth Lip-Sync)   │
+         │   Viseme Lip-Sync)  │
          └─────────────────────┘
 ```
 
-1. **Vocal Tone Emotion Model (Members 2 & 3 Joint Scope)**: A dedicated neural network trained on audio datasets that classifies acoustic properties (pitch, prosody, spectral flux) into an emotion vector.
-2. **Conversational Dialogue Model (Members 2 & 3 Joint Scope)**: Google Gemini API invoked on the core backend to generate empathetic text responses tailored to the character's personality.
-3. **Speech-to-Text & Text-to-Speech (Members 2 & 3 Joint Scope)**: Audio transcription and voice synthesis pipelines with native Tamil (`ta-IN`) and English support.
-4. **Safety & Triage Evaluator (Members 2 & 3 Joint Scope)**: Rule-based regex and prompt classification flagging emergency distress.
-5. **Non-Clinical Guarantee**: Vocal-tone emotion inferences are used solely to animate the avatar and tune empathetic dialogue responses. **They must never be presented as medical diagnoses or psychiatric evaluations.**
+1. **Vocal Tone Emotion Model (Member 3 Scope)**: A dedicated Python microservice (`ai_pipeline/app.py`) classifying acoustic properties (pitch, energy RMS, jitter, shimmer, spectral flux) into a normalized emotion distribution.
+2. **Conversational Dialogue Model (Member 2 Scope)**: Google Gemini API invoked on the Express backend (`server/src/services/geminiService.js`) to generate empathetic, character-aligned text responses.
+3. **Speech-to-Text & Text-to-Speech (Member 3 Scope)**: Audio transcription (Whisper API & Web Speech API) and voice synthesis (Edge TTS) with native Tamil (`ta-IN`) and English support.
+4. **Safety & Triage Evaluator (Member 2 Scope)**: Rule-based regex and prompt classification flagging emergency distress.
+5. **Non-Clinical Guarantee**: Vocal-tone emotion inferences are used solely to animate the avatar and tune conversational empathy. **They must never be presented as medical diagnoses or psychiatric evaluations.**
 
 ---
 
-## 2. Dataset Pipeline & Model Training Lifecycle
+## 2. Dataset Pipeline & Preprocessing (Member 3)
 
-### 2.1 Dataset Ingestion & Schema Specification
-The training pipeline accepts speech audio datasets (e.g., RAVDESS, CREMA-D, and curated Tamil speech datasets) placed into `ml-service/datasets/raw/`.
+### 2.1 Approved Datasets
+- **RAVDESS** (Ryerson Audio-Visual Database of Emotional Speech and Song): 1,440 speech files across 24 actors covering calm, happy, sad, angry, fearful, surprise, and disgust.
+- **CREMA-D** (Crowd-sourced Emotional Multimodal Actors Dataset): 7,442 clips spanning diverse demographics.
+- **Custom Bilingual Tamil/English Dataset**: 200 validated local conversational samples ensuring prosody models generalize accurately to South Asian English and colloquial Tamil pitch contours.
 
-Every dataset must include a manifest file (`manifest.csv` or `data_spec.json`) conforming to this schema:
-```csv
-audio_filepath,speaker_id,gender,emotion_label,language,sample_rate
-raw/sample_001.wav,spk_10,F,calm,ta,16000
-raw/sample_002.wav,spk_10,F,concerned,ta,16000
-raw/sample_003.wav,spk_11,M,happy,en,16000
-```
+### 2.2 Feature Engineering
+- **Sampling Rate**: Resampled to 16 kHz mono PCM WAV.
+- **Extracted Acoustic Features**:
+  - Mel-Frequency Cepstral Coefficients (MFCCs, 13-40 coefficients)
+  - Fundamental Frequency ($F_0$ / Pitch Tracking via PYIN)
+  - Root Mean Square (RMS) Energy
+  - Zero-Crossing Rate (ZCR)
+  - Spectral Centroid & Spectral Roll-off
 
-### 2.2 Preprocessing & Feature Extraction
-Executed via `ml-service/pipeline/02_preprocess_audio.py`:
-1. **Audio Normalization**: Convert all audio to mono-channel, 16,000 Hz sample rate (16-bit PCM WAV).
-2. **Silence Trimming**: Remove non-speech audio using energy-based voice activity detection (VAD).
-3. **Feature Representations**:
-   - 40 Mel-Frequency Cepstral Coefficients (MFCCs).
-   - Mel-Spectrogram (128 mel bands).
-   - Chroma and Spectral Contrast features.
+---
 
-### 2.3 Dataset Splits & Prevention of Data Leakage
-- **Split Ratio**: 70% Training, 15% Validation, 15% Test.
-- **Speaker Stratification**: The split is strictly stratified by `speaker_id` to guarantee that the model is evaluated on speakers it has never heard during training.
+## 3. Standardized Emotion Analysis Contract
 
-### 2.4 Model Architecture & Training Runs
-- **Baseline Architecture**: 1D-CNN with Batch Normalization, Dropout (0.3), and dense classification head for 6 target emotions (`happy`, `sad`, `calm`, `concerned`, `surprised`, `neutral`).
-- **Advanced Architecture**: Fine-tuned Wav2Vec2 audio representation with a classification projection layer.
-- **Loss Function**: Categorical Cross-Entropy with class weights to compensate for imbalanced labels.
-- **Evaluation Criteria**: Macro F1 Score $\ge 0.75$, Overall Test Accuracy $\ge 78\%$, Inference Latency $< 200\text{ms}$.
-
-### 2.5 Model Registry & Versioning
-Trained weights are serialized into ONNX format (`models/checkpoints/vocal_aer_vX.Y.onnx`) and registered in `models/registry.json`:
+The microservice exposes `POST /api/v1/analyze-emotion` returning:
 ```json
 {
-  "active_version": "v1.2.0",
-  "models": {
-    "v1.2.0": {
-      "checkpoint_path": "models/checkpoints/vocal_aer_v1.2.0.onnx",
-      "macro_f1": 0.782,
-      "test_accuracy": 0.814,
-      "trained_date": "2026-10-23",
-      "supported_classes": ["happy", "sad", "calm", "concerned", "surprised", "neutral"]
-    }
-  }
+  "success": true,
+  "primary_emotion": "calm",
+  "confidence_scores": {
+    "calm": 0.852,
+    "happy": 0.081,
+    "sad": 0.034,
+    "anxious": 0.018,
+    "angry": 0.008,
+    "neutral": 0.007
+  },
+  "arousal": 0.28,
+  "valence": 0.72,
+  "fallback_triggered": false,
+  "avatar_triggers": {
+    "expression": "calm",
+    "viseme_intensity": 0.65,
+    "eye_contact_rate": 0.85
+  },
+  "latency_ms": 38.5,
+  "timestamp": "2026-10-24T05:30:15.120Z"
 }
 ```
 
----
-
-## 3. Gemini API Conversation Integration
-
-### 3.1 Backend Orchestration & Boundary
-- Invoked **strictly server-side** in `server/src/modules/chat/gemini.service.ts`.
-- The user's private Gemini API key is loaded from `.env` via `process.env.GEMINI_API_KEY`.
-- The frontend never makes direct HTTP requests to Google's API.
-- **Model Selection & Verification Notice**: The proposed default model is `gemini-1.5-flash`. Model availability and regional tier must be verified in Google AI Studio at deployment time; if unavailable in the selected quota tier, configure `GEMINI_MODEL` in `.env` to the active stable endpoint (e.g. `gemini-1.5-flash-latest` or `gemini-2.0-flash-exp`).
-- **Training Separation**: Gemini API does **not** train on or ingest team speech datasets. Team datasets are exclusively utilized by the local PyTorch vocal-tone model.
-
-### 3.2 Dynamic Prompt Injection & Character Persona
-```typescript
-const systemInstruction = `
-You are ${character.name}, an AI companion in the INARO application.
-Your personality: ${character.systemPrompt}
-Your tone: ${character.toneDescription}
-
-Guidelines:
-- Listen empathetically and validate feelings.
-- Never provide medical or clinical psychiatric diagnoses.
-- Respond in the language used by the user. If the user writes in Tamil, reply in natural Tamil script.
-- Keep responses conversational, comforting, and concise (under 3 sentences).
-`;
-```
-
-### 3.3 Handling Rate Limits & Failure Modes
-- Retries with jittered exponential backoff for HTTP 429 / 503 errors.
-- Fallback circuit breaker returning pre-configured empathetic support messages when the provider is unreachable.
-
----
-
-## 4. Multilingual & Tamil (`தமிழ்`) Processing
-
-1. **Speech-to-Text (STT)**:
-   - Configured for BCP-47 language tag `ta-IN`.
-   - Audio chunks from the microphone are passed to the Tamil acoustic speech model or Web Speech API.
-2. **LLM Generation**:
-   - Gemini natively supports UTF-8 Tamil script. Responses preserve Tamil conversational idioms without awkward mechanical translations.
-3. **Text-to-Speech (TTS)**:
-   - AI responses in Tamil are routed to a Tamil neural speech synthesizer voice to ensure natural pronunciation.
+### 3.1 Safety Fallback Policy ('calm')
+Whenever maximum confidence $< 0.60$ or audio fails quality assertions, the service automatically flags `fallback_triggered: true` and defaults `primary_emotion` and `avatar_triggers.expression` to `'calm'`.

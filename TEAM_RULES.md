@@ -1,105 +1,73 @@
 # TEAM_RULES — INARO Engineering Standards & Workflow
 
-This document outlines operational rules, Git workflow, Pull Request protocols, and quality standards for all four team members and the Integration Lead working on INARO.
+This document outlines mandatory engineering protocols, Git branching strategies, Pull Request review policies, and security rules for all 5 team members working on INARO.
 
 ---
 
-## 1. Golden Rules of Development
+## 1. Core Engineering Commandments
 
-1. **`main` is Protected**: Never push directly to `main`. Every change enters through a reviewed, tested Pull Request.
-2. **Strict Scope Isolation**: Work only within your assigned modules as defined in [TEAM_OWNERSHIP.md](TEAM_OWNERSHIP.md).
-3. **Members 2 & 3 Joint Scope Coordination**: Submodule tasks between Member 2 and Member 3 must be agreed upon and confirmed with the Integration Lead before implementation.
-4. **No Direct Secret Commits**: Never commit API keys, passwords, `.env` files, or production credentials. Use [.env.example](.env.example) for documentation.
-5. **Contract-First Development**: Frontends and backends must strictly adhere to the contracts documented in [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md).
-6. **No Medical Claims in Code**: Code, UI labels, and comments must never refer to emotion predictions or tone analysis as "medical diagnoses" or "depression detection".
+1. **Zero Direct Pushes to `main`**: Direct commits and direct pushes to the `main` branch are strictly prohibited and blocked by repository branch protection. All code enters via reviewed Pull Requests.
+2. **Mandatory PR Review by Member 1**: Every Pull Request requires explicit review and approval from **Member 1 (Owner & Integration Lead)** prior to merging. PRs altering cross-module boundaries also require approval from the affected module owner.
+3. **Strict Feature Branch Naming (`feature/m<N>-<name>`)**: All development branches MUST follow the format `feature/m<N>-<short-description>`, where `<N>` corresponds to your member ID (1 through 5).
+4. **Strict Scope Isolation**: Team members must write code only within their assigned directories as documented in [TEAM_OWNERSHIP.md](TEAM_OWNERSHIP.md).
+5. **Rigorous `.env` Security Protocols**: Private API keys, MongoDB credentials, JWT secrets, and SMS tokens must **NEVER** be committed to version control. Always use `.env.example` as the canonical template.
+6. **Contract-First Development**: Never break or modify an API endpoint without first updating [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md) and securing Lead sign-off.
+7. **No Medical Claims**: INARO is an empathetic emotional well-being companion, not a clinical diagnostic device. UI copy, code comments, and documentation must never claim to diagnose or cure mental disorders.
 
 ---
 
 ## 2. Git Branching Strategy
 
-All team members branch off the latest `main`:
+All team members must branch off the latest `main` branch:
 
 ```bash
-# Update local main
+# 1. Synchronize local main
 git checkout main
 git pull origin main
 
-# Create a scoped feature branch
-git checkout -b <type>/<member-or-role>-<short-description>
+# 2. Create your assigned feature branch
+git checkout -b feature/m<N>-<feature-description>
 ```
 
-### Branch Naming Convention
+### Branch Naming Conventions
 
-| Branch Type | Syntax | Examples |
+| Branch Pattern | Description | Examples |
 | :--- | :--- | :--- |
-| **Feature** | `feat/<member>-<topic>` | `feat/m1-otp-verification`, `feat/m2-gemini-streaming`, `feat/m3-vocal-emotion`, `feat/m4-dump-audio` |
-| **Bug Fix** | `fix/<member>-<topic>` | `fix/m1-jwt-cookie-path`, `fix/m3-spectrogram-padding`, `fix/m4-notif-cron` |
-| **Documentation** | `docs/<topic>` | `docs/update-api-contracts`, `docs/setup-guide` |
-| **Lead / Architecture**| `owner/<topic>` | `owner/avatar-viseme-sync`, `owner/theme-tokens` |
+| `feature/m1-<name>` | Member 1 (Avatar UI & Landing Page) | `feature/m1-avatar-viseme-sync`, `feature/m1-landing-brand-anim` |
+| `feature/m2-<name>` | Member 2 (Interactive AI & Gemini) | `feature/m2-gemini-streaming`, `feature/m2-character-prompt-crud` |
+| `feature/m3-<name>` | Member 3 (Vocal Tone & Audio Microservice) | `feature/m3-vocal-emotion-onnx`, `feature/m3-edge-tts-synthesis` |
+| `feature/m4-<name>` | Member 4 (Auth, User Models & OTP) | `feature/m4-otp-rate-limiting`, `feature/m4-user-model-validation` |
+| `feature/m5-<name>` | Member 5 (Dump Mode, Scheduler & Helpline) | `feature/m5-dump-audio-recorder`, `feature/m5-inactivity-reminder-cron` |
+| `fix/m<N>-<name>` | Targeted bug fix | `fix/m4-jwt-cookie-samesite`, `fix/m3-audio-sampling-rate` |
 
 ---
 
-## 3. Commit Message Standards
+## 3. Pull Request Review & Merge Protocol
 
-We follow the **Conventional Commits** specification:
-
-```
-<type>(<scope>): <subject>
-
-[optional body]
-```
-
-- **Allowed Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`.
-- **Scopes**: `auth`, `chat`, `voice`, `dump`, `tracker`, `avatar`, `helpline`, `db`, `infra`.
-- **Examples**:
-  - `feat(auth): implement pluggable console OTP provider and forgot-password flow`
-  - `fix(voice): normalize sample rate to 16kHz before feature extraction`
-  - `docs(api): document 7-day rolling safety rules and helpline fallback`
-
----
-
-## 4. Pull Request Requirements & Review Process
-
-Before opening a Pull Request:
-1. Ensure your branch is rebased or merged with the latest `main`.
-2. Verify that there are no uncommitted files or console errors.
-3. Run linting and test checks locally.
-
-### PR Checklist (Mandatory for PR Description)
-- [ ] PR title follows conventional commits.
-- [ ] Only changes within the member's assigned scope are included.
-- [ ] All new endpoints/types conform to [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md).
-- [ ] No secrets or `.env` files are included.
-- [ ] Database schema changes (if any) are accompanied by a clean Prisma migration and have been reviewed by affected module owners.
-- [ ] Local tests have passed.
-
-### Approval Rules
-- **At least ONE peer review approval** is required from another team member.
-- **FINAL APPROVAL from the Integration Lead (Owner)** is required for merging into `main`.
-- Self-merging without approval is strictly prohibited.
+1. **Self-Review**: Run local linting and tests before opening a PR:
+   ```bash
+   npm run lint
+   ```
+2. **PR Description**: Fill out the `.github/pull_request_template.md` detailing:
+   - Associated Member ID & Scope
+   - Summary of changes
+   - Manual testing steps executed
+   - Confirmation that no `.env` or secrets are included
+3. **Required Approvals**:
+   - **Member 1 (Owner)** approval is mandatory for all PRs.
+   - For interfaces touching multiple modules, the secondary module owner's approval is also required.
+4. **Merge Method**: Use **Squash and Merge** to keep the commit history linear and clean. Delete the feature branch immediately after merging.
 
 ---
 
-## 5. Synchronizing with `main` and Resolving Conflicts
+## 4. Environment Variables & Security Protocols
 
-To prevent large merge conflicts:
-- Synchronize your branch with `main` at least once daily:
-  ```bash
-  git fetch origin
-  git merge origin/main
-  ```
-- If a merge conflict occurs:
-  1. Inspect the conflicting lines carefully.
-  2. If the conflict touches shared files (e.g. `schema.prisma` or `App.tsx`), coordinate directly with the co-author before resolving.
-  3. Never use `--ours` or `--theirs` blindly.
-  4. Test that the project builds cleanly after resolving conflicts.
-
----
-
-## 6. Secrets & Security Policy
-
-- Store all credentials in `.env` (which is git-ignored).
-- If an API key or token is accidentally committed:
-  1. Revoke the key immediately in the respective developer console.
-  2. Inform the Integration Lead.
-  3. Rebase the commit history to remove the secret before pushing.
+- The root `.gitignore` excludes `.env`, `*.local`, and certificate files.
+- If a new environment variable is introduced:
+  1. Add the empty or mock placeholder to `.env.example` with a helpful description.
+  2. Document which team member owns the credential.
+  3. Notify the team in the engineering channel.
+- If a secret is accidentally committed:
+  - Immediately alert Member 1.
+  - Invalidate and rotate the compromised credential in the respective cloud console (Twilio, Google AI Studio, MongoDB Atlas).
+  - Rewrite git history using `git filter-repo` to scrub the leak.
